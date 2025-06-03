@@ -1,0 +1,529 @@
+:root {
+  --primary-color: #FFC107; /* Sunny Yellow */
+  --accent-color: #FFDA63;  /* Lighter Yellow */
+  --light-bg: #FFFFFF;      /* White */
+  --white: #FFFFFF;
+  --dark-text: #212529;     /* Near Black */
+  --light-text: rgba(255, 255, 255, 0.85);
+  --light-text-secondary: rgba(255, 255, 255, 0.6);
+  --border-color: #dee2e6;  /* Light Gray */
+  --secondary-color: #343a40; /* Dark Grey */
+  --bg-color: #FFFFFF; /* White */
+  --card-bg-color: #FFFFFF; /* White */
+  --text-color: #212529; /* Near Black */
+  --text-muted-color: #6c757d; /* Grey */
+  --header-bg: #343a40; /* Dark Grey */
+  --header-text: #FFFFFF; /* White */
+  --sidebar-text: #f8f9fa; /* Light Grey/White */
+  --sidebar-active-bg: #FFC107; /* Sunny Yellow */
+  --sidebar-active-text: #212529; /* Near Black */
+  --sidebar-hover-bg: #495057; /* Medium Grey */
+  --sidebar-hover-text: #FFFFFF; /* White */
+  --button-primary-bg: #FFC107; /* Sunny Yellow */
+  --button-primary-text: #212529; /* Near Black */
+  --button-primary-hover-bg: #FFDA63; /* Lighter Yellow */
+  --button-secondary-bg: #6c757d; /* Grey */
+  --button-secondary-text: #FFFFFF; /* White */
+  --button-secondary-hover-bg: #5a6268; /* Darker Grey */
+  --link-color: #FFC107; /* Sunny Yellow */
+  --link-hover-color: #FFDA63; /* Lighter Yellow */
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+}
+
+body {
+  font-size: .875rem;
+  background-color: var(--light-bg); /* Set main background */
+  color: var(--dark-text);
+}
+
+/* --- Header --- */
+.navbar {
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+}
+
+.navbar-brand {
+  color: var(--header-text);
+  font-weight: 600;
+}
+
+/* Style for profile image in navbar dropdown */
+.profile-dropdown-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  background-color: var(--secondary-color);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+  /* Ensure it stays fixed and scrolls correctly */
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100; /* Behind navbar */
+  padding: 48px 0 0; /* Adjust based on actual navbar height */
+}
+
+.sidebar-sticky {
+  position: relative;
+  top: 0;
+  height: calc(100vh - 48px); /* Adjust based on actual navbar height */
+  padding-top: .5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar .nav-link {
+  font-weight: 500;
+  color: var(--sidebar-text);
+  padding: .5rem 1rem;
+}
+
+.sidebar .nav-link i.bi, /* Target Bootstrap Icons */
+.sidebar .nav-link i.fas { /* Target Font Awesome Icons */
+  margin-right: 0.5rem;
+  width: 16px; /* Ensure consistent icon width */
+  text-align: center;
+  color: var(--sidebar-text);
+}
+
+.sidebar .nav-link.active,
+.sidebar .nav-link:hover {
+  color: var(--sidebar-active-text);
+  background-color: var(--sidebar-active-bg);
+}
+
+.sidebar .nav-link.active i.bi,
+.sidebar .nav-link.active i.fas,
+.sidebar .nav-link:hover i.bi,
+.sidebar .nav-link:hover i.fas {
+  color: var(--sidebar-active-text); /* Make icon white on hover/active */
+}
+
+.sidebar-heading {
+  font-size: .75rem;
+  text-transform: uppercase;
+  color: var(--sidebar-text);
+  padding: .5rem 1rem;
+  margin-top: 1rem;
+}
+
+/* Style for submenu links */
+.sidebar .nav-link.sub-link {
+    padding-left: 1.5rem; /* Indent sub-links */
+    font-size: 0.8rem; /* Slightly smaller font */
+    color: var(--sidebar-text); /* Ensure color is set */
+}
+
+.sidebar .nav-link.sub-link:hover {
+    color: var(--sidebar-active-text); /* Use active text color on hover */
+    background-color: var(--sidebar-hover-bg); /* Use standard hover background */
+}
+
+/* --- Main Content --- */
+main {
+  padding-top: 1.5rem; /* Add some padding at the top */
+}
+
+.section-title {
+  color: var(--primary-color);
+}
+
+/* --- Scorecards --- */
+#demographics-scorecards .card {
+  background-color: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary-color); /* Add a colored left border */
+  box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+  transition: transform 0.2s ease-in-out;
+}
+
+#demographics-scorecards .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+}
+
+#demographics-scorecards .card-title {
+  color: var(--dark-text);
+  font-weight: 500;
+}
+
+#demographics-scorecards .card-text {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+/* --- Buttons --- */
+/* Optional: Style specific buttons if needed */
+#download-demographics-btn i.fas {
+    color: #1D6F42; /* Specific green for Excel icon */
+}
+
+/* --- Table --- */
+.table {
+    border-color: var(--border-color);
+}
+
+.table thead th {
+    background-color: var(--dark-text); /* New: Black background */
+    color: var(--white);
+    border-color: var(--dark-text); /* Match border to new background */
+    font-weight: 600;
+    white-space: nowrap;
+    /* Add sticky positioning for header later in media query */
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 77, 64, 0.05); /* Subtle hover for table rows */
+}
+
+.table td, .table th {
+    vertical-align: middle;
+    /* Add sticky positioning for first column later in media query */
+}
+
+/* === Media Queries for Responsiveness === */
+
+@media (max-width: 767px) { /* Target mobile screens (Bootstrap sm breakpoint) */
+
+    /* Ensure the container allows scrolling */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    }
+
+    /* Make table header sticky */
+    .table thead th {
+        position: -webkit-sticky; /* Safari */
+        position: sticky;
+        top: 0;
+        z-index: 2; /* Keep header above body cells */
+        /* Background already set to black */
+    }
+
+    /* Make first column sticky (both header and body cells) */
+    .table thead th:first-child,
+    .table tbody td:first-child {
+        position: -webkit-sticky; /* Safari */
+        position: sticky;
+        left: 0;
+        background-color: var(--light-bg); /* Ensure background isn't transparent */
+        z-index: 1; /* Keep first column above other body cells but below sticky header */
+        border-right: 1px solid var(--border-color); /* Add visual separator */
+    }
+
+    /* Style the top-left cell specifically */
+    .table thead th:first-child {
+        z-index: 3; /* Keep top-left cell above both sticky header and first column */
+        /* Background already set to black */
+    }
+
+}
+
+/* === Profile Page Styles (profile.html) === */
+.profile-page-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  background-color: var(--light-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.profile-page-container h1 {
+    color: var(--primary-color);
+    margin-bottom: 25px;
+}
+
+.profile-picture {
+    max-width: 100px;
+    height: auto;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 3px solid var(--border-color);
+}
+
+.profile-info {
+    text-align: left;
+    margin-bottom: 25px;
+}
+
+.profile-info p {
+    margin-bottom: 12px;
+    font-size: 1rem;
+    color: var(--dark-text);
+}
+
+.profile-info strong {
+    display: inline-block;
+    width: 80px; /* Adjust as needed */
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.profile-actions .btn {
+    padding: 10px 20px;
+    margin: 5px;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.profile-actions .btn-logout {
+    background-color: #dc3545; /* Bootstrap danger red */
+    color: var(--white);
+    border: none;
+}
+
+.profile-actions .btn-logout:hover {
+    background-color: #c82333;
+    color: var(--white);
+}
+
+.profile-actions .btn-home {
+    background-color: #6c757d; /* Bootstrap secondary gray */
+    color: var(--white);
+    border: none;
+}
+
+.profile-actions .btn-home:hover {
+    background-color: #5a6268;
+    color: var(--white);
+}
+
+.profile-login-link a {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.profile-login-link a:hover {
+    text-decoration: underline;
+}
+
+/* Adjustments for smaller screens */
+@media (max-width: 767.98px) {
+  .sidebar {
+    top: 56px; /* Adjust based on actual navbar height */
+    padding-top: 0;
+  }
+  .sidebar-sticky {
+       height: calc(100vh - 56px);
+  }
+}
+
+/* --- Custom Tab Button Styles --- */
+.nav-pills {
+    border-bottom: 2px solid var(--border-color); /* Keep this for visual separation */
+}
+
+.nav-pills .nav-link {
+    color: var(--text-color); /* Black text */
+    background-color: transparent;
+    border: 1px solid transparent; /* Pills don't usually need complex borders */
+    border-radius: var(--bs-nav-pills-border-radius, 0.375rem); /* Use Bootstrap var or default */
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    margin: 0 2px; /* Add some spacing between pills */
+}
+
+/* Hover/Focus State */
+.nav-pills .nav-link:hover,
+.nav-pills .nav-link:focus {
+    background-color: #f8f9fa; /* Very light grey background */
+    color: var(--text-color);
+}
+
+/* Active State */
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link { /* Bootstrap 5 active pill selector */
+    color: var(--text-color); 
+    background-color: var(--primary-color); /* Sunny Yellow background */
+    border-color: var(--primary-color); /* Match background */
+    font-weight: bold;
+}
+
+/* Disabled State */
+.nav-pills .nav-link.disabled {
+    color: #6c757d; 
+    background-color: transparent;
+    border-color: transparent;
+}
+
+/* Keyframes for sun animation */
+@keyframes fillSun {
+    0%   { y: 100%; height: 0%; } /* Start empty at the bottom */
+    50%  { y: 0%; height: 100%; } /* Fully filled */
+    100% { y: 0%; height: 100%; } /* Stay full briefly */
+}
+
+/* Apply animation to the rect inside the clip path */
+#sun-clip rect {
+    animation: fillSun 2s linear infinite alternate;
+}
+
+/* Style for the faint background sun */
+.sun-background {
+    fill: none; /* No fill for the background shape */
+    stroke: #cccccc; /* Lighter grey outline */
+    stroke-width: 2;
+}
+
+/* Style for the filling foreground sun */
+.sun-foreground {
+    fill: var(--primary-color); /* Fill with yellow */
+    stroke: var(--primary-color); /* Outline with yellow */
+    stroke-width: 2; /* Match background stroke width? Or keep SVG default? Let's match. */
+}
+
+/* Styles for Login Page Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
+    backdrop-filter: blur(3px); /* Add blur effect to background */
+    -webkit-backdrop-filter: blur(3px); /* For Safari */
+    display: none; /* Initially hidden */
+    justify-content: center;
+    align-items: center;
+    z-index: 1050; /* Ensure it's above other content */
+}
+
+/* Ensure the loading indicator styles apply within the overlay */
+#loading-overlay .loading-indicator {
+    padding: 0; /* Remove extra padding if overlay centers it */
+}
+
+#loading-overlay .loading-indicator svg {
+    /* Styles from .loading-indicator svg are likely sufficient */
+    /* Adjust size if needed for the overlay context */
+     width: 80px;
+     height: 80px;
+}
+
+#loading-overlay .loading-indicator p {
+    /* Styles from .loading-indicator p are likely sufficient */
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+/* === Custom Sun Loading Indicator === */
+.loading-indicator {
+    text-align: center;
+    padding: 2rem;
+    /* display: none;  Let the inline style in HTML handle initial visibility */
+}
+
+.loading-indicator svg {
+    width: 60px; /* Adjust size as needed */
+    height: 60px;
+    margin-bottom: 0.75rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.loading-indicator p {
+    margin-top: 0.5rem;
+    color: #000000; /* Black color for the text */
+    font-size: 0.95rem;
+    font-weight: bold;
+}
+
+/* Ensure Navbar Dropdown overlays content */
+.navbar .dropdown-menu {
+    position: absolute; /* Explicitly set absolute positioning */
+    /* Bootstrap's JS usually handles top/left/right positioning */
+}
+
+/* -- Sidebar Styles -- */
+.sidebar {
+  background-color: var(--secondary-color);
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+  /* Ensure it stays fixed and scrolls correctly */
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100; /* Behind navbar */
+  padding: 48px 0 0; /* Adjust based on actual navbar height */
+}
+
+/* Custom styling for Attendance sub-pills/tabs */
+#attendance-pills-tab {
+  border-bottom: 1px solid #dee2e6; /* Add a line below the pills */
+}
+
+#attendance-pills-tab .nav-link {
+  color: #6c757d; /* Muted text for inactive */
+  background-color: transparent;
+  border: 1px solid transparent; /* Prepare for border manipulation */
+  border-bottom: none; /* Remove bottom border */
+  border-radius: 0.3rem 0.3rem 0 0; /* Rounded top corners */
+  padding: 0.5rem 1rem;
+  margin-bottom: -1px; /* Make pill overlap the container's bottom border */
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+/* Hover state for inactive pills */
+#attendance-pills-tab .nav-link:not(.active):hover {
+  color: #495057;
+  background-color: #f8f9fa; /* Very light background on hover */
+  border-color: #e9ecef #e9ecef transparent; /* Subtle border on hover */
+}
+
+/* Active pill style */
+#attendance-pills-tab .nav-link.active {
+  color: #0d6efd; /* Bootstrap primary blue text */
+  background-color: #fff; /* White background to blend with content */
+  border-color: #dee2e6 #dee2e6 #fff; /* Match container border, white bottom border */
+  border-bottom: 1px solid #fff; /* Ensure bottom border is explicitly white to cover container line */
+  font-weight: 500;
+}
+
+/* Style the content area below the pills */
+#attendance-pills-tabContent {
+  border: 1px solid #dee2e6;
+  border-top: none; /* Top border is handled by the pills container */
+  padding: 1.25rem; /* Add some padding inside the content area */
+  border-radius: 0 0 0.3rem 0.3rem; /* Rounded bottom corners */
+  background-color: #fff; /* Ensure white background */
+  margin-top: -1px; /* Pull content up slightly if needed */
+}
+
+/* Force nav pills to display inline on mobile */
+.mobile-pills-inline .nav-item {
+    display: inline-block; /* Force items onto one line */
+    white-space: nowrap; /* Prevent button text from wrapping */
+    margin-right: 0.5rem; /* Add some spacing between pills */
+    margin-bottom: 0.5rem; /* Add spacing below if they do wrap on very small screens */
+}
+
+.mobile-pills-inline .nav-link {
+    padding: 0.5rem 0.8rem; /* Adjust padding for potentially smaller buttons */
+}
+
+/* Optional: Container for horizontal scrolling if needed */
+.pills-scroll-container {
+    overflow-x: auto; /* Enable horizontal scrollbar if content overflows */
+    white-space: nowrap; /* Keep items on one line within the container */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scrollbar-width: thin; /* Optional: thinner scrollbar */
+}
+
+/* Apply only on smaller screens */
+@media (max-width: 575.98px) { 
+    /* Add any specific overrides for XS screens if the above isn't enough */
+    /* For example, you might adjust font size or padding further */
+}

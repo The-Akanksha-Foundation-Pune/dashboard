@@ -1,0 +1,1348 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <!-- Demographics Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+        <h1 class="h2">Demographics</h1>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-2">
+            <label for="academicYearFilter" class="form-label">Academic Year</label>
+            <select class="form-select" id="academicYearFilter">
+                <option value="All">All Years</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <label for="cityFilter" class="form-label">City</label>
+            <select class="form-select" id="cityFilter">
+                <option value="All">All Cities</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <label for="genderFilter" class="form-label">Gender</label>
+            <select class="form-select" id="genderFilter">
+                <option value="All">All</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <label for="attendance-month-filter" class="form-label">Month</label>
+            <select class="form-select" id="attendance-month-filter">
+                <option value="All">All Months</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Main Tabs -->
+    <ul class="nav nav-tabs mb-4" id="demographics-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="btn-student-numbers" data-bs-toggle="tab" data-bs-target="#student-numbers-view" type="button" role="tab" aria-controls="student-numbers-view" aria-selected="true">Student Numbers</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="btn-attendance" data-bs-toggle="tab" data-bs-target="#attendance-view" type="button" role="tab" aria-controls="attendance-view" aria-selected="false">Attendance</button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="demographics-tab-content">
+        <!-- Student Numbers View -->
+        <div class="tab-pane fade show active" id="student-numbers-view" role="tabpanel" aria-labelledby="btn-student-numbers">
+            <!-- Scorecards Row -->
+            <div class="row mb-4" id="demographics-scorecards">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Students</h5>
+                            <p class="card-text fs-4 fw-bold" id="total-students-card">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Male Students</h5>
+                            <p class="card-text fs-4 fw-bold" id="male-students-card">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Female Students</h5>
+                            <p class="card-text fs-4 fw-bold" id="female-students-card">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph/Table Area -->
+            <div class="mt-4">
+                <!-- Title and Download Button Row -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4>Student Counts by School and Grade</h4>
+                    <button id="download-demographics-btn" class="btn btn-outline-secondary btn-sm" title="Download Table Data">
+                        <i class="fas fa-file-excel text-success"></i> <span class="d-none d-sm-inline">Download</span>
+                    </button>
+                </div>
+
+                <!-- Demographics Table -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive" id="demographicsTableContainer">
+                            <!-- Loading indicator -->
+                            <div class="loading-indicator" id="loading-indicator-sun">
+                                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                                    <defs>
+                                        <clipPath id="sun-clip">
+                                            <rect x="0" y="100%" width="100%" height="0%" />
+                                        </clipPath>
+                                        <symbol id="sun-shape" viewBox="0 0 100 100">
+                                            <path d="M 25 50 A 25 25 0 0 1 75 50 Z" />
+                                            <g transform="translate(50,50)">
+                                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(0)" />
+                                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(45)" />
+                                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(90)" />
+                                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(-45)" />
+                                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(-90)" />
+                                            </g>
+                                        </symbol>
+                                    </defs>
+                                    <use href="#sun-shape" class="sun-background" stroke="#FFFDE7" />
+                                    <use href="#sun-shape" class="sun-foreground" stroke="var(--primary-color)" clip-path="url(#sun-clip)" />
+                                </svg>
+                                <p>Loading...</p>
+                            </div>
+                            <!-- Table will be dynamically inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance View -->
+        <div class="tab-pane fade" id="attendance-view" role="tabpanel" aria-labelledby="btn-attendance">
+            <!-- Nav Pills for Attendance Sub-sections -->
+            <div class="pills-scroll-container">
+                <ul class="nav nav-pills mb-3 mt-3 mobile-pills-inline" id="attendance-pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="pills-student-att-tab" data-bs-toggle="pill" data-bs-target="#pills-student-att" type="button" role="tab" aria-controls="pills-student-att" aria-selected="true">Student</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pills-parent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-parent-att" type="button" role="tab" aria-controls="pills-parent-att" aria-selected="false">Parent</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pills-swparent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-swparent-att" type="button" role="tab" aria-controls="pills-swparent-att" aria-selected="false">SW- Parent</button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Tab Content for Attendance Sub-sections -->
+            <div class="tab-content" id="attendance-pills-tabContent">
+                <!-- Student Attendance View -->
+                <div class="tab-pane fade show active" id="pills-student-att" role="tabpanel" aria-labelledby="pills-student-att-tab" tabindex="0">
+                    <h5 class="mb-3">Student Attendance Percentage by Grade</h5>
+                    <!-- Download Button for Attendance Pivot -->
+                    <div class="text-end mb-2">
+                        <button id="download-attendance-pivot-btn" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-excel me-1"></i> Download
+                        </button>
+                    </div>
+                    <!-- Container for the dynamic attendance pivot table -->
+                    <div class="table-responsive">
+                        <div id="attendance-pivot-table-container">
+                            <!-- Table HTML will be injected here by JS -->
+                            <p class="text-center text-muted">Select filters to load student attendance data.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parent Attendance View -->
+                <div class="tab-pane fade" id="pills-parent-att" role="tabpanel" aria-labelledby="pills-parent-att-tab" tabindex="0">
+                    <h5 class="mb-3">Parent Attendance Details</h5>
+                    <!-- Download Button for Parent Attendance -->
+                    <div class="text-end mb-2">
+                        <button id="download-parent-attendance-btn" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-excel me-1"></i> Download
+                        </button>
+                    </div>
+                    <!-- Container for the dynamic parent attendance table -->
+                    <div class="table-responsive">
+                        <div id="parent-attendance-table-container">
+                            <!-- Parent table HTML will be injected here by JS -->
+                            <p class="text-center text-muted">Select filters to load parent attendance data.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SW-Parent Attendance View -->
+                <div class="tab-pane fade" id="pills-swparent-att" role="tabpanel" aria-labelledby="pills-swparent-att-tab" tabindex="0">
+                    <h5 class="mb-3">Social Worker / Parent Attendance Details</h5>
+                    <!-- Download Button for SW Parent Attendance -->
+                    <div class="text-end mb-2">
+                        <button id="download-swparent-attendance-btn" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-excel me-1"></i> Download
+                        </button>
+                    </div>
+                    <!-- Container for the dynamic SW Parent attendance table -->
+                    <div id="sw-parent-attendance-table-container" class="mt-3 table-responsive">
+                        <div class="loading-indicator" style="display: none;">
+                            <!-- Sun SVG -->
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+                                <circle cx="50" cy="50" r="20" fill="orange" />
+                                <path id="sun-fill-sw" d="" fill="yellow" style="transition: d 0.5s ease-in-out;"></path> <!-- Unique ID -->
+                                <g id="sun-rays-sw">
+                                    <!-- Rays will be added/animated by CSS/JS if needed -->
+                                </g>
+                            </svg>
+                        </div>
+                        <p class="text-center text-muted">Select filters to load SW - Parent attendance data.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Attendance Trend Modal -->
+<div class="modal fade" id="schoolMonthlyAttendanceModal" tabindex="-1" aria-labelledby="schoolMonthlyAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="schoolMonthlyAttendanceModalLabel">Monthly Attendance Trend</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Showing average student attendance percentage per month for: <strong id="modalSchoolName"></strong></p>
+                <div style="height: 400px;">
+                    <canvas id="schoolMonthlyAttendanceChart"></canvas>
+                </div>
+                <div id="modalErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+                <div id="modalLoadingIndicator" class="text-center mt-2" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <!-- Trend Description Placeholder -->
+                <p id="modalTrendDescription" class="mt-3 small text-muted"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Parent Attendance Trend Modal -->
+<div class="modal fade" id="parentMonthlyAttendanceModal" tabindex="-1" aria-labelledby="parentMonthlyAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="parentMonthlyAttendanceModalLabel">Monthly Parent Attendance Trend</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Showing average parent attendance percentage per month for: <strong id="modalParentSchoolName"></strong></p>
+                <div style="height: 400px;">
+                    <canvas id="parentMonthlyAttendanceChart"></canvas>
+                </div>
+                <div id="parentModalErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+                <div id="parentModalLoadingIndicator" class="text-center mt-2" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <!-- Trend Description Placeholder -->
+                <p id="parentModalTrendDescription" class="mt-3 small text-muted"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SW-Parent Monthly Trend Modal -->
+<div class="modal fade" id="swParentMonthlyModal" tabindex="-1" aria-labelledby="swParentMonthlyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="swParentMonthlyModalLabel">Monthly SW-Parent Attendance Trend</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Showing average SW-Parent attendance percentage per month for: <strong id="modalSwParentSchoolName"></strong></p>
+                <div style="height: 400px;">
+                    <canvas id="swParentMonthlyChart"></canvas>
+                </div>
+                <div id="swParentModalErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+                <div id="swParentModalLoadingIndicator" class="text-center mt-2" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <!-- Trend Description Placeholder -->
+                <p id="swParentModalTrendDescription" class="mt-3 small text-muted"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grade-Specific Monthly Trend Modal -->
+<div class="modal fade" id="gradeSpecificModal" tabindex="-1" aria-labelledby="gradeSpecificModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="gradeSpecificModalLabel">Monthly Attendance Trend</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Showing attendance percentage per month for: <strong id="modalSchoolGradeInfo"></strong></p>
+                <div style="height: 400px;">
+                    <canvas id="gradeSpecificChart"></canvas>
+                </div>
+                <div id="gradeSpecificErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+                <div id="gradeSpecificLoadingIndicator" class="text-center mt-2" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <!-- Trend Description Placeholder -->
+                <p id="gradeSpecificTrendDescription" class="mt-3 small text-muted"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS for Demographics Page -->
+<style>
+    .school-link {
+        color: #0d6efd;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .school-link:hover {
+        color: #0a58ca;
+        text-decoration: underline;
+    }
+
+    /* Add a subtle indicator that the school name is clickable */
+    .school-link::after {
+        content: " 📊";
+        font-size: 0.8em;
+        opacity: 0.7;
+    }
+
+    .percentage-cell {
+        position: relative;
+        transition: background-color 0.2s;
+    }
+
+    .percentage-cell:hover {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+    }
+
+    .percentage-cell::after {
+        content: " 📈";
+        font-size: 0.8em;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .percentage-cell:hover::after {
+        opacity: 0.7;
+    }
+</style>
+
+<!-- JavaScript for Demographics Page -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<!-- Helper function for trend calculation -->
+<script>
+// Helper function to calculate linear trend slope and return a description
+function calculateLinearTrend(yValues) {
+    const n = yValues.length;
+    // Only consider valid numerical data points for trend calculation
+    const validData = yValues.map((y, i) => ({ x: i, y: y }))
+                             .filter(point => typeof point.y === 'number' && isFinite(point.y));
+
+    const validPointsCount = validData.length;
+    if (validPointsCount < 2) {
+        return "Insufficient data points to determine a trend.";
+    }
+
+    // Calculate means
+    const sumX = validData.reduce((acc, point) => acc + point.x, 0);
+    const sumY = validData.reduce((acc, point) => acc + point.y, 0);
+    const meanX = sumX / validPointsCount;
+    const meanY = sumY / validPointsCount;
+
+    // Calculate slope
+    const numerator = validData.reduce((acc, point) => acc + (point.x - meanX) * (point.y - meanY), 0);
+    const denominator = validData.reduce((acc, point) => acc + Math.pow(point.x - meanX, 2), 0);
+
+    const slope = denominator !== 0 ? numerator / denominator : 0;
+
+    // Interpret the slope and return a description
+    const slopeThreshold = 0.75; // Example: A change of 0.75% per month
+    if (slope > slopeThreshold) {
+        return "Trend: Overall attendance shows a generally upward trend across the months.";
+    } else if (slope < -slopeThreshold) {
+        return "Trend: Overall attendance shows a generally downward trend across the months.";
+    } else {
+        return "Trend: Overall attendance remained relatively stable across the months.";
+    }
+}
+</script>
+
+<script>
+// Register the datalabels plugin globally
+Chart.register(ChartDataLabels);
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize variables for DOM elements
+    const academicYearFilter = document.getElementById('academicYearFilter');
+    const cityFilter = document.getElementById('cityFilter');
+    const genderFilter = document.getElementById('genderFilter');
+    const attendanceMonthFilter = document.getElementById('attendance-month-filter');
+    const demographicsTableContainer = document.getElementById('demographicsTableContainer');
+    const scorecardsContainer = document.getElementById('demographics-scorecards');
+    const downloadDemographicsBtn = document.getElementById('download-demographics-btn');
+    const downloadAttendancePivotBtn = document.getElementById('download-attendance-pivot-btn');
+    const downloadParentAttendanceBtn = document.getElementById('download-parent-attendance-btn');
+    const downloadSwParentAttendanceBtn = document.getElementById('download-swparent-attendance-btn');
+
+    let filtersLoaded = false;
+
+    // Load initial filters
+    populateFilters();
+
+    // Event listeners for filters
+    academicYearFilter.addEventListener('change', loadDemographicsTable);
+    cityFilter.addEventListener('change', loadDemographicsTable);
+    genderFilter.addEventListener('change', loadDemographicsTable);
+    attendanceMonthFilter.addEventListener('change', loadDemographicsTable);
+
+    // Download button click handlers
+    if (downloadDemographicsBtn) {
+        downloadDemographicsBtn.addEventListener('click', downloadDemographicsExcel);
+    }
+
+    if (downloadAttendancePivotBtn) {
+        downloadAttendancePivotBtn.addEventListener('click', downloadAttendancePivotExcel);
+    }
+
+    if (downloadParentAttendanceBtn) {
+        downloadParentAttendanceBtn.addEventListener('click', downloadParentAttendanceExcel);
+    }
+
+    if (downloadSwParentAttendanceBtn) {
+        downloadSwParentAttendanceBtn.addEventListener('click', downloadSwParentAttendanceExcel);
+    }
+
+    // Tab change event listeners
+    const mainTabs = document.querySelectorAll('#demographics-tabs .nav-link');
+    if (mainTabs.length > 0) {
+        mainTabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(event) {
+                console.log(`Main tab shown: ${event.target.id}`);
+                loadDemographicsTable();
+            });
+        });
+    }
+
+    const attendanceSubTabs = document.querySelectorAll('#attendance-pills-tab .nav-link');
+    if (attendanceSubTabs.length > 0) {
+        attendanceSubTabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(event) {
+                console.log(`Attendance sub-tab shown: ${event.target.id}`);
+                loadDemographicsTable();
+            });
+        });
+    }
+
+    // Function to fetch and populate filters
+    async function populateFilters() {
+        console.log("Attempting to populate demographics filters...");
+        try {
+            const response = await fetch('/demographics/filters');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            // Populate Cities
+            cityFilter.innerHTML = '<option selected value="All">All Cities</option>';
+            data.cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+
+            // Populate Genders
+            genderFilter.innerHTML = '<option selected value="All">All Genders</option>';
+            for (const code in data.genders) {
+                const option = document.createElement('option');
+                option.value = code;
+                option.textContent = data.genders[code];
+                genderFilter.appendChild(option);
+            }
+
+            // Populate Academic Years
+            if (data.academic_years && data.academic_years.length > 0) {
+                academicYearFilter.innerHTML = '<option value="All">All Years</option>';
+                data.academic_years.forEach(year => {
+                    academicYearFilter.innerHTML += `<option value="${year}">${year}</option>`;
+                });
+            } else {
+                academicYearFilter.innerHTML = '<option value="All">All Years</option>';
+            }
+
+            // Populate Attendance Months
+            attendanceMonthFilter.innerHTML = '<option selected value="All">All Months</option>';
+            if (data.attendance_months && data.attendance_months.length > 0) {
+                data.attendance_months.forEach(month => {
+                    const option = document.createElement('option');
+                    option.value = month;
+                    option.textContent = month;
+                    attendanceMonthFilter.appendChild(option);
+                });
+            }
+
+            filtersLoaded = true;
+            console.log("Filters populated successfully.");
+            loadDemographicsTable();
+
+        } catch (error) {
+            console.error("Error fetching or populating filters:", error);
+            if (demographicsTableContainer) {
+                demographicsTableContainer.innerHTML = '<p class="text-danger">Error loading filters. Please try refreshing.</p>';
+            }
+        }
+    }
+
+    // Function to load table data based on filters
+    async function loadDemographicsTable() {
+        console.log("loadDemographicsTable called.");
+        if (!filtersLoaded) {
+            console.log("loadDemographicsTable: Filters not yet loaded, skipping table load.");
+            return;
+        }
+
+        const academicYear = academicYearFilter.value;
+        const month = attendanceMonthFilter.value;
+        const city = cityFilter.value;
+        const gender = genderFilter.value;
+
+        const studentNumbersTabActive = document.getElementById('btn-student-numbers')?.classList.contains('active');
+        const attendanceTabActive = document.getElementById('btn-attendance')?.classList.contains('active');
+
+        console.log(`Loading table data with filters - Year: ${academicYear}, Month: ${month}, City: ${city}, Gender: ${gender}`);
+
+        let targetContainerId;
+        let dataUrl;
+        let attendanceTableContainer = document.getElementById('attendance-pivot-table-container');
+        let parentAttendanceTableContainer = document.getElementById('parent-attendance-table-container');
+        let swParentAttendanceTableContainer = document.getElementById('sw-parent-attendance-table-container');
+
+        if (studentNumbersTabActive) {
+            targetContainerId = 'demographicsTableContainer';
+            dataUrl = "/demographics/table_data";
+            if (attendanceTableContainer) attendanceTableContainer.innerHTML = '';
+            if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '';
+            if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '';
+            if (scorecardsContainer) scorecardsContainer.style.display = 'flex';
+        } else if (attendanceTabActive) {
+            const studentAttSubTabActive = document.getElementById('pills-student-att-tab')?.classList.contains('active');
+            const parentAttSubTabActive = document.getElementById('pills-parent-att-tab')?.classList.contains('active');
+            const swParentAttSubTabActive = document.getElementById('pills-swparent-att-tab')?.classList.contains('active');
+
+            console.log(`Attendance main tab active. Student sub-tab: ${studentAttSubTabActive}, Parent sub-tab: ${parentAttSubTabActive}, SW Parent sub-tab: ${swParentAttSubTabActive}`);
+
+            if (studentAttSubTabActive) {
+                console.log("Student attendance sub-tab is active, preparing to load data");
+                targetContainerId = 'attendance-pivot-table-container';
+                dataUrl = "/demographics/get_attendance_pivot_data";
+                if (demographicsTableContainer) demographicsTableContainer.innerHTML = '';
+                if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '';
+                if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '';
+                if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+            } else if (parentAttSubTabActive) {
+                targetContainerId = 'parent-attendance-table-container';
+                dataUrl = "/demographics/get_ptm_attendance_data";
+                if (demographicsTableContainer) demographicsTableContainer.innerHTML = '';
+                if (attendanceTableContainer) attendanceTableContainer.innerHTML = '';
+                if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '';
+                if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+            } else if (swParentAttSubTabActive) {
+                targetContainerId = 'sw-parent-attendance-table-container';
+                dataUrl = "/demographics/get_sw_parent_attendance_data";
+                if (demographicsTableContainer) demographicsTableContainer.innerHTML = '';
+                if (attendanceTableContainer) attendanceTableContainer.innerHTML = '';
+                if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '';
+                if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+            } else {
+                console.log("Other/No attendance sub-tab active, clearing all attendance tables.");
+                if (attendanceTableContainer) attendanceTableContainer.innerHTML = '<p class="text-center text-muted">Select filters and ensure the \'Student\' sub-tab is active.</p>';
+                if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '<p class="text-center text-muted">Select filters and ensure the \'Parent\' sub-tab is active.</p>';
+                if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '<p class="text-center text-muted">Select filters and ensure the \'SW - Parent\' sub-tab is active.</p>';
+                if (demographicsTableContainer) demographicsTableContainer.innerHTML = '';
+                if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+                return;
+            }
+        } else {
+            console.log("No relevant tab active, not loading table data.");
+            return;
+        }
+
+        const tableContainer = document.getElementById(targetContainerId);
+        if (!tableContainer) {
+            console.error(`Target container '${targetContainerId}' not found.`);
+            return;
+        }
+
+        const loadingIndicator = document.getElementById('loading-indicator-sun');
+        if (loadingIndicator) loadingIndicator.style.display = 'flex';
+        tableContainer.innerHTML = '';
+        if (studentNumbersTabActive && scorecardsContainer) {
+            scorecardsContainer.style.display = 'flex';
+            document.getElementById('total-students-card').textContent = '0';
+            document.getElementById('male-students-card').textContent = '0';
+            document.getElementById('female-students-card').textContent = '0';
+        }
+
+        try {
+            console.log(`Fetching data from ${dataUrl} with params:`, {
+                academic_year: academicYear,
+                month: month,
+                city: city,
+                gender: gender
+            });
+
+            const response = await fetch(dataUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    academic_year: academicYear,
+                    month: month,
+                    city: city,
+                    gender: gender
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Data received:", data);
+
+            if (studentNumbersTabActive) {
+                // Update scorecards
+                if (data.scorecards) {
+                    document.getElementById('total-students-card').textContent = data.scorecards.total;
+                    document.getElementById('male-students-card').textContent = data.scorecards.male;
+                    document.getElementById('female-students-card').textContent = data.scorecards.female;
+                }
+            }
+
+            // Update table content
+            tableContainer.innerHTML = data.html_table || '';
+
+        } catch (error) {
+            console.error('Error loading data:', error);
+            tableContainer.innerHTML = `<div class="alert alert-danger">Error loading data: ${error.message}</div>`;
+        } finally {
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        }
+    }
+
+    // Handle Excel downloads
+    function downloadDemographicsExcel() {
+        const filters = {
+            academic_year: academicYearFilter.value,
+            city: cityFilter.value,
+            gender: genderFilter.value
+        };
+
+        downloadExcel('/demographics/download_excel', filters, 'demographics_data.xlsx');
+    }
+
+    function downloadAttendancePivotExcel() {
+        const filters = {
+            academic_year: academicYearFilter.value,
+            month: attendanceMonthFilter.value,
+            city: cityFilter.value,
+            gender: genderFilter.value
+        };
+
+        downloadExcel('/demographics/download_attendance_pivot', filters, 'attendance_pivot.xlsx');
+    }
+
+    function downloadParentAttendanceExcel() {
+        const filters = {
+            academic_year: academicYearFilter.value,
+            month: attendanceMonthFilter.value,
+            city: cityFilter.value,
+            gender: genderFilter.value
+        };
+
+        downloadExcel('/demographics/download_ptm_attendance_data', filters, 'parent_attendance.xlsx');
+    }
+
+    function downloadSwParentAttendanceExcel() {
+        const filters = {
+            academic_year: academicYearFilter.value,
+            month: attendanceMonthFilter.value,
+            city: cityFilter.value,
+            gender: genderFilter.value
+        };
+
+        downloadExcel('/demographics/download_sw_parent_attendance_data', filters, 'sw_parent_attendance.xlsx');
+    }
+
+    // Generic Excel download function
+    function downloadExcel(url, filters, filename) {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(filters)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Download failed');
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error downloading excel:', error);
+            alert('Failed to download Excel file. Please try again.');
+        });
+    }
+
+    // Function to set up click handlers for school names and percentage cells in attendance tables
+    function setupSchoolClickHandlers() {
+        console.log("Setting up school click handlers");
+
+        // For Student Attendance
+        const studentAttendanceTable = document.querySelector('#attendance-pivot-table-container table');
+        if (studentAttendanceTable) {
+            const schoolRows = studentAttendanceTable.querySelectorAll('tbody tr');
+            schoolRows.forEach(row => {
+                const schoolNameCell = row.querySelector('th');
+                if (schoolNameCell && schoolNameCell.textContent !== 'Total') {
+                    // Extract the actual school name (remove any suffix like " (1)")
+                    const fullText = schoolNameCell.textContent.trim();
+                    const schoolName = fullText.replace(/\s+\(\d+\)$/, '');
+
+                    schoolNameCell.style.cursor = 'pointer';
+                    schoolNameCell.title = 'Click to view monthly attendance trend';
+                    schoolNameCell.classList.add('school-link');
+
+                    schoolNameCell.addEventListener('click', function() {
+                        showStudentMonthlyAttendance(schoolName);
+                    });
+
+                    // Add click handlers for percentage cells in this row
+                    const percentageCells = row.querySelectorAll('td');
+                    percentageCells.forEach((cell, index) => {
+                        if (cell.textContent.trim() !== '' && cell.textContent.trim() !== '-') {
+                            // Get the grade name from the table header
+                            const headerRow = studentAttendanceTable.querySelector('thead tr');
+                            if (headerRow) {
+                                const headerCells = headerRow.querySelectorAll('th');
+                                if (headerCells.length > index + 1) { // +1 because of the school name column
+                                    const gradeName = headerCells[index + 1].textContent.trim();
+                                    if (gradeName !== 'Total') {
+                                        cell.style.cursor = 'pointer';
+                                        cell.title = `Click to view monthly attendance trend for ${schoolName}, Grade ${gradeName}`;
+                                        cell.classList.add('percentage-cell');
+
+                                        cell.addEventListener('click', function() {
+                                            showGradeSpecificAttendance(schoolName, gradeName, 'student');
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // For Parent Attendance
+        const parentAttendanceTable = document.querySelector('#parent-attendance-table-container table');
+        if (parentAttendanceTable) {
+            const schoolRows = parentAttendanceTable.querySelectorAll('tbody tr');
+            schoolRows.forEach(row => {
+                const schoolNameCell = row.querySelector('th');
+                if (schoolNameCell && schoolNameCell.textContent !== 'Total') {
+                    // Extract the actual school name (remove any suffix like " (1)")
+                    const fullText = schoolNameCell.textContent.trim();
+                    const schoolName = fullText.replace(/\s+\(\d+\)$/, '');
+
+                    schoolNameCell.style.cursor = 'pointer';
+                    schoolNameCell.title = 'Click to view monthly parent attendance trend';
+                    schoolNameCell.classList.add('school-link');
+
+                    schoolNameCell.addEventListener('click', function() {
+                        showParentMonthlyAttendance(schoolName);
+                    });
+
+                    // Add click handlers for percentage cells in this row
+                    const percentageCells = row.querySelectorAll('td');
+                    percentageCells.forEach((cell, index) => {
+                        if (cell.textContent.trim() !== '' && cell.textContent.trim() !== '-') {
+                            // Get the grade name from the table header
+                            const headerRow = parentAttendanceTable.querySelector('thead tr');
+                            if (headerRow) {
+                                const headerCells = headerRow.querySelectorAll('th');
+                                if (headerCells.length > index + 1) { // +1 because of the school name column
+                                    const gradeName = headerCells[index + 1].textContent.trim();
+                                    if (gradeName !== 'Total') {
+                                        cell.style.cursor = 'pointer';
+                                        cell.title = `Click to view monthly parent attendance trend for ${schoolName}, Grade ${gradeName}`;
+                                        cell.classList.add('percentage-cell');
+
+                                        cell.addEventListener('click', function() {
+                                            showGradeSpecificAttendance(schoolName, gradeName, 'parent');
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // For SW-Parent Attendance
+        const swParentAttendanceTable = document.querySelector('#sw-parent-attendance-table-container table');
+        if (swParentAttendanceTable) {
+            const schoolRows = swParentAttendanceTable.querySelectorAll('tbody tr');
+            schoolRows.forEach(row => {
+                const schoolNameCell = row.querySelector('th');
+                if (schoolNameCell && schoolNameCell.textContent !== 'Total') {
+                    // Extract the actual school name (remove any suffix like " (1)")
+                    const fullText = schoolNameCell.textContent.trim();
+                    const schoolName = fullText.replace(/\s+\(\d+\)$/, '');
+
+                    schoolNameCell.style.cursor = 'pointer';
+                    schoolNameCell.title = 'Click to view monthly SW-Parent attendance trend';
+                    schoolNameCell.classList.add('school-link');
+
+                    schoolNameCell.addEventListener('click', function() {
+                        showSwParentMonthlyAttendance(schoolName);
+                    });
+
+                    // Add click handlers for percentage cells in this row
+                    const percentageCells = row.querySelectorAll('td');
+                    percentageCells.forEach((cell, index) => {
+                        if (cell.textContent.trim() !== '' && cell.textContent.trim() !== '-') {
+                            // Get the grade name from the table header
+                            const headerRow = swParentAttendanceTable.querySelector('thead tr');
+                            if (headerRow) {
+                                const headerCells = headerRow.querySelectorAll('th');
+                                if (headerCells.length > index + 1) { // +1 because of the school name column
+                                    const gradeName = headerCells[index + 1].textContent.trim();
+                                    if (gradeName !== 'Total') {
+                                        cell.style.cursor = 'pointer';
+                                        cell.title = `Click to view monthly SW-Parent attendance trend for ${schoolName}, Grade ${gradeName}`;
+                                        cell.classList.add('percentage-cell');
+
+                                        cell.addEventListener('click', function() {
+                                            showGradeSpecificAttendance(schoolName, gradeName, 'swparent');
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    // Function to show grade-specific monthly attendance modal
+    function showGradeSpecificAttendance(schoolName, gradeName, attendanceType) {
+        console.log(`Showing ${attendanceType} attendance for school: ${schoolName}, grade: ${gradeName}`);
+
+        // Update modal title based on attendance type
+        let modalTitle = '';
+        if (attendanceType === 'student') {
+            modalTitle = 'Student Monthly Attendance Trend';
+        } else if (attendanceType === 'parent') {
+            modalTitle = 'Parent Monthly Attendance Trend';
+        } else if (attendanceType === 'swparent') {
+            modalTitle = 'SW-Parent Monthly Attendance Trend';
+        }
+        document.getElementById('gradeSpecificModalLabel').textContent = modalTitle;
+
+        // Update modal info text
+        document.getElementById('modalSchoolGradeInfo').textContent = `${schoolName}, Grade ${gradeName}`;
+
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('gradeSpecificLoadingIndicator');
+        const errorMsg = document.getElementById('gradeSpecificErrorMsg');
+        loadingIndicator.style.display = 'block';
+        errorMsg.style.display = 'none';
+
+        // Get current filter values
+        const academicYear = academicYearFilter.value;
+        const gender = genderFilter.value;
+
+        // Convert grade name back to database format if it's a number
+        let dbGradeName = gradeName;
+        if (!isNaN(parseInt(gradeName)) && gradeName.length <= 2) {
+            dbGradeName = `GRADE ${gradeName}`;
+            console.log(`Converted grade name for database query: ${gradeName} -> ${dbGradeName}`);
+        }
+
+        // Determine the endpoint based on attendance type
+        let endpoint = '';
+        if (attendanceType === 'student') {
+            endpoint = '/demographics/get_grade_specific_monthly_attendance';
+        } else if (attendanceType === 'parent') {
+            endpoint = '/demographics/get_grade_specific_parent_monthly';
+        } else if (attendanceType === 'swparent') {
+            endpoint = '/demographics/get_grade_specific_swparent_monthly';
+        }
+
+        // Fetch monthly data
+        fetch(`${endpoint}?school_name=${encodeURIComponent(schoolName)}&grade_name=${encodeURIComponent(dbGradeName)}&academic_year=${encodeURIComponent(academicYear)}&gender=${encodeURIComponent(gender)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingIndicator.style.display = 'none';
+
+                // Create or update chart
+                createOrUpdateChart('gradeSpecificChart', data.labels, data.data);
+
+                // Calculate and display trend
+                const trendDescription = calculateLinearTrend(data.data);
+                document.getElementById('gradeSpecificTrendDescription').textContent = trendDescription;
+            })
+            .catch(error => {
+                console.error(`Error fetching ${attendanceType} monthly attendance data:`, error);
+                loadingIndicator.style.display = 'none';
+                errorMsg.textContent = `Error loading data: ${error.message}`;
+                errorMsg.style.display = 'block';
+            });
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('gradeSpecificModal'));
+        modal.show();
+    }
+
+    // Function to show student monthly attendance modal
+    function showStudentMonthlyAttendance(schoolName) {
+        console.log(`Showing monthly attendance for school: ${schoolName}`);
+
+        // Update modal title
+        document.getElementById('modalSchoolName').textContent = schoolName;
+
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('modalLoadingIndicator');
+        const errorMsg = document.getElementById('modalErrorMsg');
+        loadingIndicator.style.display = 'block';
+        errorMsg.style.display = 'none';
+
+        // Get current filter values
+        const academicYear = academicYearFilter.value;
+        const gender = genderFilter.value;
+
+        // Fetch monthly data
+        fetch(`/demographics/get_school_monthly_attendance?school_name=${encodeURIComponent(schoolName)}&academic_year=${encodeURIComponent(academicYear)}&gender=${encodeURIComponent(gender)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingIndicator.style.display = 'none';
+
+                // Create or update chart
+                createOrUpdateChart('schoolMonthlyAttendanceChart', data.labels, data.data);
+
+                // Calculate and display trend
+                const trendDescription = calculateLinearTrend(data.data);
+                document.getElementById('modalTrendDescription').textContent = trendDescription;
+            })
+            .catch(error => {
+                console.error('Error fetching monthly attendance data:', error);
+                loadingIndicator.style.display = 'none';
+                errorMsg.textContent = `Error loading data: ${error.message}`;
+                errorMsg.style.display = 'block';
+            });
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('schoolMonthlyAttendanceModal'));
+        modal.show();
+    }
+
+    // Function to show parent monthly attendance modal
+    function showParentMonthlyAttendance(schoolName) {
+        console.log(`Showing monthly parent attendance for school: ${schoolName}`);
+
+        // Update modal title
+        document.getElementById('modalParentSchoolName').textContent = schoolName;
+
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('parentModalLoadingIndicator');
+        const errorMsg = document.getElementById('parentModalErrorMsg');
+        loadingIndicator.style.display = 'block';
+        errorMsg.style.display = 'none';
+
+        // Get current filter values
+        const academicYear = academicYearFilter.value;
+        const gender = genderFilter.value;
+
+        // Fetch monthly data
+        fetch(`/demographics/get_school_parent_monthly_attendance?school_name=${encodeURIComponent(schoolName)}&academic_year=${encodeURIComponent(academicYear)}&gender=${encodeURIComponent(gender)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingIndicator.style.display = 'none';
+
+                // Create or update chart
+                createOrUpdateChart('parentMonthlyAttendanceChart', data.labels, data.data);
+
+                // Calculate and display trend
+                const trendDescription = calculateLinearTrend(data.data);
+                document.getElementById('parentModalTrendDescription').textContent = trendDescription;
+            })
+            .catch(error => {
+                console.error('Error fetching monthly parent attendance data:', error);
+                loadingIndicator.style.display = 'none';
+                errorMsg.textContent = `Error loading data: ${error.message}`;
+                errorMsg.style.display = 'block';
+            });
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('parentMonthlyAttendanceModal'));
+        modal.show();
+    }
+
+    // Function to show SW-Parent monthly attendance modal
+    function showSwParentMonthlyAttendance(schoolName) {
+        console.log(`Showing monthly SW-Parent attendance for school: ${schoolName}`);
+
+        // Update modal title
+        document.getElementById('modalSwParentSchoolName').textContent = schoolName;
+
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('swParentModalLoadingIndicator');
+        const errorMsg = document.getElementById('swParentModalErrorMsg');
+        loadingIndicator.style.display = 'block';
+        errorMsg.style.display = 'none';
+
+        // Get current filter values
+        const academicYear = academicYearFilter.value;
+        const gender = genderFilter.value;
+
+        // Fetch monthly data
+        fetch(`/demographics/get_school_sw_parent_monthly?school_name=${encodeURIComponent(schoolName)}&academic_year=${encodeURIComponent(academicYear)}&gender=${encodeURIComponent(gender)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingIndicator.style.display = 'none';
+
+                // Create or update chart
+                createOrUpdateChart('swParentMonthlyChart', data.labels, data.data);
+
+                // Calculate and display trend
+                const trendDescription = calculateLinearTrend(data.data);
+                document.getElementById('swParentModalTrendDescription').textContent = trendDescription;
+            })
+            .catch(error => {
+                console.error('Error fetching monthly SW-Parent attendance data:', error);
+                loadingIndicator.style.display = 'none';
+                errorMsg.textContent = `Error loading data: ${error.message}`;
+                errorMsg.style.display = 'block';
+            });
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('swParentMonthlyModal'));
+        modal.show();
+    }
+
+    // Function to create or update a chart
+    function createOrUpdateChart(canvasId, labels, data) {
+        // Get the canvas element
+        const canvas = document.getElementById(canvasId);
+
+        // Check if there's an existing chart instance stored in Chart.js registry
+        const existingChart = Chart.getChart(canvasId);
+        if (existingChart) {
+            // Properly destroy the existing chart
+            existingChart.destroy();
+            console.log(`Destroyed existing chart with ID: ${canvasId}`);
+        }
+
+        // Get the 2D context after destroying any existing chart
+        const ctx = canvas.getContext('2d');
+
+        // Generate gradient colors for bars
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(75, 192, 192, 0.8)');
+        gradient.addColorStop(1, 'rgba(54, 162, 235, 0.8)');
+
+        // Process data to ensure all values are numbers
+        const processedData = data.map(value => {
+            if (typeof value === 'string') {
+                // Try to extract number from string (e.g. "85.5%" -> 85.5)
+                const match = value.match(/(\d+(\.\d+)?)/);
+                return match ? parseFloat(match[0]) : 0;
+            }
+            return typeof value === 'number' ? value : 0;
+        });
+
+        // Create new chart with animations and better styling
+        const newChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: processedData,
+                    backgroundColor: gradient,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                    hoverBackgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    hoverBorderColor: 'rgba(255, 99, 132, 1)',
+                    hoverBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 1500,
+                    easing: 'easeOutQuart',
+                    delay: function(context) {
+                        return context.dataIndex * 100;
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Attendance %',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(200, 200, 200, 0.2)'
+                        },
+                        ticks: {
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Month',
+                            font: {
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 5,
+                        formatter: (value) => {
+                            // Ensure value is a number and format it
+                            if (typeof value === 'number' && !isNaN(value)) {
+                                return value.toFixed(1) + '%';
+                            }
+                            return '0.0%';
+                        },
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        color: function(context) {
+                            const value = context.dataset.data[context.dataIndex];
+                            return value > 80 ? '#28a745' : // Green for high attendance
+                                   value > 60 ? '#17a2b8' : // Blue for medium attendance
+                                   '#dc3545';               // Red for low attendance
+                        },
+                        textStrokeColor: 'white',
+                        textStrokeWidth: 1,
+                        textShadowBlur: 5,
+                        textShadowColor: 'rgba(0, 0, 0, 0.3)'
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            weight: 'bold',
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        padding: 12,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(context) {
+                                // Ensure raw value is a number and format it
+                                if (typeof context.raw === 'number' && !isNaN(context.raw)) {
+                                    return `Attendance: ${context.raw.toFixed(1)}%`;
+                                }
+                                return 'Attendance: 0.0%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log(`Created new chart with ID: ${canvasId}`);
+        return newChart;
+    }
+
+    // Function to calculate linear trend from attendance data
+    function calculateLinearTrend(data) {
+        // Process data to ensure all values are numbers
+        const processedData = data.map(value => {
+            if (typeof value === 'string') {
+                const match = value.match(/(\d+(\.\d+)?)/);
+                return match ? parseFloat(match[0]) : 0;
+            }
+            return typeof value === 'number' ? value : 0;
+        });
+
+        // Filter out zero values (might be missing data)
+        const filteredData = processedData.filter(value => value > 0);
+
+        // Need at least 2 data points to calculate a trend
+        if (filteredData.length < 2) {
+            return "Not enough data to determine a trend.";
+        }
+
+        // Calculate simple linear regression
+        const n = filteredData.length;
+        const indices = Array.from({length: n}, (_, i) => i + 1);
+
+        // Calculate means
+        const meanX = indices.reduce((sum, x) => sum + x, 0) / n;
+        const meanY = filteredData.reduce((sum, y) => sum + y, 0) / n;
+
+        // Calculate slope
+        let numerator = 0;
+        let denominator = 0;
+
+        for (let i = 0; i < n; i++) {
+            numerator += (indices[i] - meanX) * (filteredData[i] - meanY);
+            denominator += Math.pow(indices[i] - meanX, 2);
+        }
+
+        const slope = denominator !== 0 ? numerator / denominator : 0;
+
+        // Determine trend direction and magnitude
+        if (Math.abs(slope) < 0.5) {
+            return "Attendance has been relatively stable over this period.";
+        } else if (slope > 0) {
+            return slope > 2 ?
+                "Attendance shows a strong positive trend (significantly improving)." :
+                "Attendance shows a positive trend (gradually improving).";
+        } else {
+            return slope < -2 ?
+                "Attendance shows a strong negative trend (significantly declining)." :
+                "Attendance shows a negative trend (gradually declining).";
+        }
+    }
+
+    // Add observer to detect when tables are added to the DOM
+    const observeTableContainers = () => {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    // Check if any of the added nodes contain tables
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1 && (node.tagName === 'TABLE' || node.querySelector('table'))) {
+                            console.log('Table added to DOM, setting up click handlers');
+                            setupSchoolClickHandlers();
+                        }
+                    });
+                }
+            });
+        });
+
+        // Observe all table containers
+        const containers = [
+            document.getElementById('attendance-pivot-table-container'),
+            document.getElementById('parent-attendance-table-container'),
+            document.getElementById('sw-parent-attendance-table-container')
+        ];
+
+        containers.forEach(container => {
+            if (container) {
+                observer.observe(container, { childList: true, subtree: true });
+            }
+        });
+    };
+
+    // Start observing after DOM is loaded
+    observeTableContainers();
+});
+</script>
+{% endblock %}

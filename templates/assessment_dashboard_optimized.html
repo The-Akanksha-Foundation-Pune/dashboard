@@ -1,0 +1,1990 @@
+{% extends "base.html" %}
+
+{% block title %}Leadership Assessment Dashboard - Empower Institute{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" />
+<style>
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .dashboard-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+    }
+    .card-header {
+        background-color: #212529;
+        color: white;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        font-weight: bold;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    .summary-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #ffc107;
+    }
+    .summary-label {
+        color: #5a5c69;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+    .select2-container {
+        width: 100% !important;
+    }
+    .comparison-section {
+        display: none;
+    }
+    .comparison-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #ffc107;
+    }
+    .btn-primary {
+        background-color: #212529;
+        border-color: #212529;
+    }
+    .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+        background-color: #343a40;
+        border-color: #343a40;
+    }
+    .btn-success {
+        background-color: #ffc107;
+        border-color: #ffc107;
+        color: #212529;
+    }
+    .btn-success:hover, .btn-success:focus, .btn-success:active {
+        background-color: #e0a800;
+        border-color: #e0a800;
+        color: #212529;
+    }
+    .page-item.active .page-link {
+        background-color: #212529;
+        border-color: #212529;
+    }
+    .page-link {
+        color: #212529;
+    }
+    .page-link:hover {
+        color: #ffc107;
+    }
+    .comparison-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .comparison-label {
+        font-size: 0.8rem;
+        color: #5a5c69;
+    }
+    .positive-change {
+        color: #1cc88a;
+    }
+    .negative-change {
+        color: #e74a3b;
+    }
+    .skeleton-loader {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+        height: 20px;
+        margin-bottom: 10px;
+    }
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    .pagination-info {
+        margin-bottom: 10px;
+    }
+    .data-table-container {
+        position: relative;
+        min-height: 200px;
+    }
+    .data-table-loader {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+    }
+    .filter-group {
+        margin-bottom: 15px;
+    }
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Using the loading overlay from base.html -->
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Leadership Assessment Dashboard</h1>
+        <div>
+            <button id="toggle-comparison" class="btn btn-sm btn-primary">
+                <i class="fas fa-exchange-alt mr-1"></i> Compare Assessments
+            </button>
+            <button id="export-data" class="btn btn-sm btn-success ml-2">
+                <i class="fas fa-file-excel mr-1"></i> Export Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Primary Filters Section -->
+    <div class="filter-section">
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <div class="filter-group">
+                    <label for="academic-year-filter">Academic Year</label>
+                    <select id="academic-year-filter" class="form-control">
+                        <option value="All">All Academic Years</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="filter-group">
+                    <label for="assessment-type-filter">Assessment Type</label>
+                    <select id="assessment-type-filter" class="form-control">
+                        <option value="All">All Types</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="filter-group">
+                    <label for="date-range-filter">Assessment Date Range</label>
+                    <input type="text" id="date-range-filter" class="form-control" />
+                </div>
+            </div>
+        </div>
+        <div class="row secondary-filters" style="display: none;">
+            <div class="col-md-4 mb-2">
+                <div class="filter-group">
+                    <label for="subject-filter">Subject</label>
+                    <select id="subject-filter" class="form-control">
+                        <option value="All">All Subjects</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="filter-group">
+                    <label for="school-filter">School</label>
+                    <select id="school-filter" class="form-control">
+                        <option value="All">All Schools</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="filter-group">
+                    <label for="grade-filter">Grade</label>
+                    <select id="grade-filter" class="form-control">
+                        <option value="All">All Grades</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <button id="toggle-advanced-filters" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-filter mr-1"></i> Advanced Filters
+                </button>
+            </div>
+            <div class="col-md-8 mb-2 text-right">
+                <button id="apply-filters" class="btn btn-primary">
+                    <i class="fas fa-search mr-1"></i> Apply Filters
+                </button>
+                <button id="reset-filters" class="btn btn-outline-secondary ml-2">
+                    <i class="fas fa-undo mr-1"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Filters Section (Hidden by default) -->
+    <div id="comparison-filters" class="filter-section comparison-section">
+        <h5 class="mb-3">Compare Assessment Periods</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white py-2">Period 1</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="period1-academic-year">Academic Year</label>
+                            <select id="period1-academic-year" class="form-control">
+                                <option value="All">All Academic Years</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="period1-assessment-type">Assessment Type</label>
+                            <select id="period1-assessment-type" class="form-control">
+                                <option value="All">All Types</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-warning text-dark py-2">Period 2</div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="period2-academic-year">Academic Year</label>
+                            <select id="period2-academic-year" class="form-control">
+                                <option value="All">All Academic Years</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="period2-assessment-type">Assessment Type</label>
+                            <select id="period2-assessment-type" class="form-control">
+                                <option value="All">All Types</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-right">
+                <button id="compare-periods" class="btn btn-primary">
+                    <i class="fas fa-chart-line mr-1"></i> Compare Periods
+                </button>
+                <button id="cancel-comparison" class="btn btn-outline-secondary ml-2">
+                    <i class="fas fa-times mr-1"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row" id="summary-cards">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-dark shadow h-100 py-2 dashboard-card" style="border-left: 4px solid #212529;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="summary-label mb-1">Total Students</div>
+                            <div class="summary-value" id="total-students">
+                                <div class="skeleton-loader"></div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2 dashboard-card" style="border-left: 4px solid #ffc107;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="summary-label mb-1">Average Score</div>
+                            <div class="summary-value" id="average-score">
+                                <div class="skeleton-loader"></div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-percentage fa-2x text-dark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-dark shadow h-100 py-2 dashboard-card" style="border-left: 4px solid #212529;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="summary-label mb-1">Total Assessments</div>
+                            <div class="summary-value" id="total-assessments">
+                                <div class="skeleton-loader"></div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2 dashboard-card" style="border-left: 4px solid #ffc107;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="summary-label mb-1">Total Schools</div>
+                            <div class="summary-value" id="total-schools">
+                                <div class="skeleton-loader"></div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-school fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Results Section (Hidden by default) -->
+    <div id="comparison-results" class="comparison-section mb-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold">Assessment Comparison Results</h6>
+                        <div>
+                            <span class="badge bg-dark text-white p-2 mr-2" id="period1-label">Period 1</span>
+                            <span class="badge bg-warning text-dark p-2" id="period2-label">Period 2</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <div class="comparison-card p-3">
+                                    <div class="comparison-label">Average Score Change</div>
+                                    <div class="comparison-value" id="avg-score-change">-</div>
+                                    <div class="small" id="avg-score-percent-change">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="comparison-card p-3">
+                                    <div class="comparison-label">Student Count Change</div>
+                                    <div class="comparison-value" id="student-count-change">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="comparison-card p-3">
+                                    <div class="comparison-label">Assessment Count Change</div>
+                                    <div class="comparison-value" id="assessment-count-change">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="comparison-card p-3">
+                                    <div class="comparison-label">Most Improved Subject</div>
+                                    <div class="comparison-value" id="most-improved-subject">-</div>
+                                    <div class="small" id="most-improved-subject-change">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <canvas id="subject-comparison-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <canvas id="competency-comparison-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Overall Student Performance</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="overall-performance-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Average Performance by School</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="school-performance-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Performance by Subject</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="subject-performance-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold">Gender-based Performance</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="gender-performance-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consolidated Performance Tables -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">Consolidated Performance by School and Grade</h6>
+                    <button class="btn btn-sm btn-success" id="export-consolidated-btn">
+                        <i class="fas fa-download mr-1"></i> Export
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="consolidated-performance-table-container" style="overflow-x: auto;">
+                        <table id="consolidated-performance-table" class="table table-bordered table-hover">
+                            <thead>
+                                <tr id="consolidated-header-row">
+                                    <th>School</th>
+                                </tr>
+                            </thead>
+                            <tbody id="consolidated-table-body">
+                                <tr>
+                                    <td colspan="10" class="text-center">Loading data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">Subject Performance by School</h6>
+                    <button class="btn btn-sm btn-success" id="export-subject-btn">
+                        <i class="fas fa-download mr-1"></i> Export
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="subject-performance-table-container" style="overflow-x: auto;">
+                        <table id="subject-performance-table" class="table table-bordered table-hover">
+                            <thead>
+                                <tr id="subject-header-row">
+                                    <th>School</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subject-table-body">
+                                <tr>
+                                    <td colspan="10" class="text-center">Loading data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Data Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4 dashboard-card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">Assessment Data</h6>
+                    <div class="pagination-info">
+                        Showing <span id="showing-start">0</span> to <span id="showing-end">0</span> of <span id="total-records">0</span> records
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="data-table-container">
+                        <div class="data-table-loader" id="table-loader">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="assessment-table" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th>Student ID</th>
+                                        <th>School</th>
+                                        <th>Subject</th>
+                                        <th>Grade</th>
+                                        <th>Marks</th>
+                                        <th>Percentage</th>
+                                        <th>Competency</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Table content will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="form-inline">
+                                <label class="mr-2">Page Size:</label>
+                                <select id="page-size" class="form-control form-control-sm">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <nav aria-label="Assessment data pagination">
+                                <ul class="pagination justify-content-end" id="pagination">
+                                    <!-- Pagination will be generated dynamically -->
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    // Global variables
+    let currentPage = 1;
+    let pageSize = 50;
+    let totalPages = 0;
+    let totalRecords = 0;
+    let currentFilters = {};
+    let charts = {};
+
+    $(document).ready(function() {
+        // Initialize Select2 for all dropdowns
+        $('select').select2({
+            placeholder: "Select an option",
+            allowClear: true
+        });
+
+        // Initialize date range picker
+        $('#date-range-filter').daterangepicker({
+            autoUpdateInput: false,
+            locale: {
+                cancelLabel: 'Clear'
+            }
+        });
+
+        $('#date-range-filter').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('YYYY-MM-DD') + ' to ' + picker.endDate.format('YYYY-MM-DD'));
+        });
+
+        $('#date-range-filter').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+        });
+
+        // Toggle advanced filters
+        $('#toggle-advanced-filters').click(function() {
+            $('.secondary-filters').slideToggle();
+            $(this).find('i').toggleClass('fa-filter fa-times');
+
+            if ($(this).text().trim() === 'Advanced Filters') {
+                $(this).html('<i class="fas fa-times mr-1"></i> Hide Filters');
+            } else {
+                $(this).html('<i class="fas fa-filter mr-1"></i> Advanced Filters');
+            }
+        });
+
+        // Toggle comparison section
+        $('#toggle-comparison').click(function() {
+            $('#comparison-filters').slideDown();
+            $(this).hide();
+        });
+
+        $('#cancel-comparison').click(function() {
+            $('#comparison-filters').slideUp();
+            $('#comparison-results').slideUp();
+            $('#toggle-comparison').show();
+        });
+
+        // Page size change
+        $('#page-size').change(function() {
+            pageSize = parseInt($(this).val());
+            currentPage = 1;
+            loadAssessmentData();
+        });
+
+        // Apply filters button
+        $('#apply-filters').click(function() {
+            currentPage = 1;
+            loadDashboardData();
+        });
+
+        // Reset filters button
+        $('#reset-filters').click(function() {
+            // Reset all filters to default values
+            $('select').val('All').trigger('change');
+            $('#date-range-filter').val('');
+
+            // Reset current page
+            currentPage = 1;
+
+            // Load data with reset filters
+            loadDashboardData();
+        });
+
+        // Compare periods button
+        $('#compare-periods').click(function() {
+            compareAssessmentPeriods();
+        });
+
+        // Export data button
+        $('#export-data').click(function() {
+            exportAssessmentData();
+        });
+
+        // Load primary filters
+        loadPrimaryFilters();
+
+        // Academic year and assessment type change event
+        $('#academic-year-filter, #assessment-type-filter').change(function() {
+            loadSecondaryFilters();
+        });
+
+        // Initialize comparison dropdowns with the same options
+        function updateComparisonDropdowns() {
+            // Copy academic year options
+            const yearOptions = $('#academic-year-filter').html();
+            $('#period1-academic-year, #period2-academic-year').html(yearOptions);
+
+            // Copy assessment type options
+            const typeOptions = $('#assessment-type-filter').html();
+            $('#period1-assessment-type, #period2-assessment-type').html(typeOptions);
+
+            // Re-initialize Select2 for the comparison dropdowns
+            $('#period1-academic-year, #period2-academic-year, #period1-assessment-type, #period2-assessment-type').select2({
+                placeholder: "Select an option",
+                allowClear: true
+            });
+        }
+
+        // Update comparison dropdowns when primary filters change
+        $('#academic-year-filter, #assessment-type-filter').on('change', function() {
+            updateComparisonDropdowns();
+        });
+
+        // Update comparison dropdowns when toggle comparison button is clicked
+        $('#toggle-comparison').on('click', function() {
+            updateComparisonDropdowns();
+        });
+    });
+
+    // Load primary filters (academic years, assessment types)
+    function loadPrimaryFilters() {
+        $.ajax({
+            url: "{{ url_for('assessment.get_filters') }}",
+            type: "GET",
+            dataType: "json",
+            success: function(data) {
+                // Populate academic years
+                data.academic_years.forEach(function(year) {
+                    $('#academic-year-filter').append(new Option(year, year));
+                });
+
+                // Populate assessment types
+                data.assessment_types.forEach(function(type) {
+                    $('#assessment-type-filter').append(new Option(type, type));
+                });
+
+                // Set date range if available
+                if (data.date_range.min && data.date_range.max) {
+                    $('#date-range-filter').daterangepicker({
+                        startDate: moment(data.date_range.min),
+                        endDate: moment(data.date_range.max),
+                        locale: {
+                            format: 'YYYY-MM-DD'
+                        }
+                    });
+                    $('#date-range-filter').val(data.date_range.min + ' to ' + data.date_range.max);
+                }
+
+                // Load secondary filters
+                loadSecondaryFilters();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading primary filters:", error);
+                alert("Failed to load filter options. Please refresh the page.");
+            }
+        });
+    }
+
+    // Load secondary filters based on primary filter selections
+    function loadSecondaryFilters() {
+        const academicYear = $('#academic-year-filter').val();
+        const assessmentType = $('#assessment-type-filter').val();
+
+        // Show loading state
+        $('#subject-filter, #school-filter, #grade-filter').prop('disabled', true);
+
+        $.ajax({
+            url: "{{ url_for('assessment.get_secondary_filters') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                academic_year: academicYear,
+                assessment_type: assessmentType
+            }),
+            dataType: "json",
+            success: function(data) {
+                // Clear existing options
+                $('#subject-filter').html('<option value="All">All Subjects</option>');
+                $('#school-filter').html('<option value="All">All Schools</option>');
+                $('#grade-filter').html('<option value="All">All Grades</option>');
+
+                // Populate subjects
+                data.subjects.forEach(function(subject) {
+                    $('#subject-filter').append(new Option(subject, subject));
+                });
+
+                // Populate schools
+                data.schools.forEach(function(school) {
+                    $('#school-filter').append(new Option(school, school));
+                });
+
+                // Populate grades
+                data.grades.forEach(function(grade) {
+                    $('#grade-filter').append(new Option(grade, grade));
+                });
+
+                // Re-enable filters
+                $('#subject-filter, #school-filter, #grade-filter').prop('disabled', false);
+
+                // Load dashboard data after filters are loaded
+                loadDashboardData();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading secondary filters:", error);
+
+                // Set default options
+                $('#subject-filter').html('<option value="All">All Subjects</option>');
+                $('#school-filter').html('<option value="All">All Schools</option>');
+                $('#grade-filter').html('<option value="All">All Grades</option>');
+
+                // Re-enable filters
+                $('#subject-filter, #school-filter, #grade-filter').prop('disabled', false);
+
+                // Show error message
+                const errorMsg = "Failed to load filters. Using default options.";
+                $('#filter-error').remove();
+                $('.filter-section').prepend(
+                    `<div id="filter-error" class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>${errorMsg}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>`
+                );
+
+                // Still try to load dashboard data with default filters
+                loadDashboardData();
+            },
+            timeout: 10000 // 10 seconds timeout
+        });
+    }
+
+    // Load dashboard data based on selected filters
+    function loadDashboardData() {
+        // Show loading indicators
+        showLoadingState();
+
+        // Get filter values
+        currentFilters = getFilterValues();
+
+        // Load data with error handling and retry logic
+        loadDataWithRetry();
+    }
+
+    // Load data with retry logic
+    function loadDataWithRetry(retryCount = 0) {
+        const maxRetries = 3;
+        const retryDelay = 1000; // 1 second
+
+        // Load summary statistics
+        loadSummaryStats(function(error) {
+            if (error && retryCount < maxRetries) {
+                console.log(`Retrying summary stats (${retryCount + 1}/${maxRetries})...`);
+                setTimeout(function() {
+                    loadSummaryStats();
+                }, retryDelay);
+            }
+        });
+
+        // Load chart data with delay to avoid too many simultaneous connections
+        setTimeout(function() {
+            loadChartData(function(error) {
+                if (error && retryCount < maxRetries) {
+                    console.log(`Retrying chart data (${retryCount + 1}/${maxRetries})...`);
+                    setTimeout(function() {
+                        loadChartData();
+                    }, retryDelay);
+                }
+            });
+        }, 500);
+
+        // Load paginated assessment data with delay
+        setTimeout(function() {
+            loadAssessmentData(function(error) {
+                if (error && retryCount < maxRetries) {
+                    console.log(`Retrying assessment data (${retryCount + 1}/${maxRetries})...`);
+                    setTimeout(function() {
+                        loadAssessmentData();
+                    }, retryDelay);
+                }
+            });
+        }, 1000);
+    }
+
+    // Get current filter values
+    function getFilterValues() {
+        const dateRange = $('#date-range-filter').val();
+        let startDate = null;
+        let endDate = null;
+
+        if (dateRange) {
+            const dates = dateRange.split(' to ');
+            startDate = dates[0];
+            endDate = dates[1];
+        }
+
+        return {
+            academic_year: $('#academic-year-filter').val(),
+            assessment_type: $('#assessment-type-filter').val(),
+            subject: $('#subject-filter').val(),
+            school: $('#school-filter').val(),
+            grade: $('#grade-filter').val(),
+            gender: 'All', // Default to All for now
+            start_date: startDate,
+            end_date: endDate
+        };
+    }
+
+    // Show loading state for all components
+    function showLoadingState() {
+        // Show skeleton loaders for summary cards
+        $('#total-students, #average-score, #total-assessments, #total-schools').html('<div class="skeleton-loader"></div>');
+
+        // Show table loader
+        $('#table-loader').show();
+    }
+
+    // Load summary statistics
+    function loadSummaryStats(callback) {
+        $.ajax({
+            url: "{{ url_for('assessment.get_summary_stats') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(currentFilters),
+            dataType: "json",
+            success: function(data) {
+                $('#total-students').text(data.total_students.toLocaleString());
+                $('#average-score').text(data.average_score.toFixed(2) + '%');
+                $('#total-assessments').text(data.total_assessments.toLocaleString());
+                $('#total-schools').text(data.total_schools.toLocaleString());
+
+                if (callback) callback(null);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading summary statistics:", error);
+                $('#total-students, #average-score, #total-assessments, #total-schools').text('--');
+
+                if (callback) callback(error);
+            }
+        });
+    }
+
+    // Load chart data
+    function loadChartData(callback) {
+        let errorCount = 0;
+        let completedCount = 0;
+        const totalCharts = 5; // Updated to include gender chart and consolidated tables
+
+        // Function to check if all charts are loaded
+        function checkCompletion() {
+            completedCount++;
+            if (completedCount === totalCharts) {
+                if (callback) callback(errorCount > 0 ? 'Some charts failed to load' : null);
+            }
+        }
+
+        // Load overall performance chart
+        $.ajax({
+            url: "{{ url_for('assessment.get_overall_performance_chart') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(currentFilters),
+            dataType: "json",
+            success: function(data) {
+                createOverallPerformanceChart(data);
+                checkCompletion();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading overall performance chart:", error);
+                errorCount++;
+                checkCompletion();
+            }
+        });
+
+        // Load school performance chart with a small delay
+        setTimeout(function() {
+            $.ajax({
+                url: "{{ url_for('assessment.get_school_performance_chart') }}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(currentFilters),
+                dataType: "json",
+                success: function(data) {
+                    createSchoolPerformanceChart(data);
+                    checkCompletion();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading school performance chart:", error);
+                    errorCount++;
+                    checkCompletion();
+                }
+            });
+        }, 200);
+
+        // Load subject performance chart with a small delay
+        setTimeout(function() {
+            $.ajax({
+                url: "{{ url_for('assessment.get_subject_performance_chart') }}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(currentFilters),
+                dataType: "json",
+                success: function(data) {
+                    createSubjectPerformanceChart(data);
+                    checkCompletion();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading subject performance chart:", error);
+                    errorCount++;
+                    checkCompletion();
+                }
+            });
+        }, 400);
+
+        // Load gender performance chart with a small delay
+        setTimeout(function() {
+            $.ajax({
+                url: "{{ url_for('assessment.get_gender_performance_chart') }}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(currentFilters),
+                dataType: "json",
+                success: function(data) {
+                    createGenderPerformanceChart(data);
+                    checkCompletion();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading gender performance chart:", error);
+                    errorCount++;
+                    checkCompletion();
+                }
+            });
+        }, 600);
+
+        // Load consolidated performance tables with a small delay
+        setTimeout(function() {
+            loadConsolidatedPerformanceTables();
+            checkCompletion();
+        }, 800);
+    }
+
+    // Load consolidated performance tables
+    function loadConsolidatedPerformanceTables() {
+        // Load consolidated performance by grade and school
+        $.ajax({
+            url: "{{ url_for('assessment.get_consolidated_performance_chart') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(currentFilters),
+            dataType: "json",
+            success: function(data) {
+                createConsolidatedPerformanceTable(data);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading consolidated performance data:", error);
+                $('#consolidated-table-body').html('<tr><td colspan="10" class="text-center text-danger">Failed to load data</td></tr>');
+            }
+        });
+
+        // Load subject performance by school
+        $.ajax({
+            url: "{{ url_for('assessment.get_subject_performance_by_school') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(currentFilters),
+            dataType: "json",
+            success: function(data) {
+                createSubjectPerformanceTable(data);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading subject performance by school data:", error);
+                $('#subject-table-body').html('<tr><td colspan="10" class="text-center text-danger">Failed to load data</td></tr>');
+            }
+        });
+    }
+
+    // Load paginated assessment data
+    function loadAssessmentData(callback) {
+        $.ajax({
+            url: "{{ url_for('assessment.get_paginated_data') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                filters: currentFilters,
+                page: currentPage,
+                page_size: pageSize,
+                sort_by: 'assessmentDate',
+                sort_dir: 'desc'
+            }),
+            dataType: "json",
+            success: function(response) {
+                // Update pagination info
+                totalRecords = response.pagination.total_records;
+                totalPages = response.pagination.total_pages;
+
+                const start = (currentPage - 1) * pageSize + 1;
+                const end = Math.min(start + pageSize - 1, totalRecords);
+
+                $('#showing-start').text(start);
+                $('#showing-end').text(end);
+                $('#total-records').text(totalRecords);
+
+                // Populate table
+                populateTable(response.data);
+
+                // Generate pagination
+                generatePagination();
+
+                // Hide table loader
+                $('#table-loader').hide();
+
+                if (callback) callback(null);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading assessment data:", error);
+                $('#table-loader').hide();
+
+                // Show a message in the table instead of an alert
+                const tableBody = $('#assessment-table tbody');
+                tableBody.empty();
+                tableBody.append('<tr><td colspan="9" class="text-center text-warning">Could not load data. Please try again later.</td></tr>');
+
+                // Clear pagination info
+                $('#showing-start').text('0');
+                $('#showing-end').text('0');
+                $('#total-records').text('0');
+
+                // Clear pagination
+                $('#pagination').empty();
+
+                if (callback) callback(error);
+            },
+            timeout: 15000 // 15 seconds timeout
+        });
+    }
+
+    // Populate assessment data table
+    function populateTable(data) {
+        const tableBody = $('#assessment-table tbody');
+        tableBody.empty();
+
+        if (data.length === 0) {
+            tableBody.append('<tr><td colspan="9" class="text-center">No data available</td></tr>');
+            return;
+        }
+
+        data.forEach(function(assessment) {
+            const row = $('<tr></tr>');
+
+            row.append(`<td>${assessment.student_name || '-'}</td>`);
+            row.append(`<td>${assessment.student_id || '-'}</td>`);
+            row.append(`<td>${assessment.school_name || '-'}</td>`);
+            row.append(`<td>${assessment.subject_name || '-'}</td>`);
+            row.append(`<td>${assessment.grade_name || '-'}</td>`);
+            row.append(`<td>${assessment.obtained_marks || 0}/${assessment.max_marks || 0}</td>`);
+            row.append(`<td>${assessment.percentage ? assessment.percentage.toFixed(2) + '%' : '0%'}</td>`);
+            row.append(`<td>${assessment.competency_level_name || '-'}</td>`);
+            row.append(`<td>${assessment.assessment_date || '-'}</td>`);
+
+            tableBody.append(row);
+        });
+    }
+
+    // Generate pagination controls
+    function generatePagination() {
+        const pagination = $('#pagination');
+        pagination.empty();
+
+        // Previous button
+        const prevDisabled = currentPage === 1 ? 'disabled' : '';
+        pagination.append(`
+            <li class="page-item ${prevDisabled}">
+                <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        `);
+
+        // Page numbers
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+
+        if (endPage - startPage < 4 && totalPages > 5) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const active = i === currentPage ? 'active' : '';
+            pagination.append(`
+                <li class="page-item ${active}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `);
+        }
+
+        // Next button
+        const nextDisabled = currentPage === totalPages || totalPages === 0 ? 'disabled' : '';
+        pagination.append(`
+            <li class="page-item ${nextDisabled}">
+                <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        `);
+
+        // Add click event to pagination links
+        $('.page-link').click(function(e) {
+            e.preventDefault();
+
+            if ($(this).parent().hasClass('disabled')) {
+                return;
+            }
+
+            currentPage = parseInt($(this).data('page'));
+            loadAssessmentData();
+
+            // Scroll to table top
+            $('html, body').animate({
+                scrollTop: $('#assessment-table').offset().top - 100
+            }, 200);
+        });
+    }
+
+    // Create overall performance pie chart
+    function createOverallPerformanceChart(data) {
+        const ctx = document.getElementById('overall-performance-chart').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (charts.overallPerformance) {
+            charts.overallPerformance.destroy();
+        }
+
+        charts.overallPerformance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: data.colors || [
+                        '#212529', '#ffc107', '#6c757d', '#343a40', '#e0a800'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Create school performance bar chart
+    function createSchoolPerformanceChart(data) {
+        const ctx = document.getElementById('school-performance-chart').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (charts.schoolPerformance) {
+            charts.schoolPerformance.destroy();
+        }
+
+        charts.schoolPerformance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Average Score (%)',
+                    data: data.data,
+                    backgroundColor: '#212529',
+                    borderColor: '#212529',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Average: ${context.raw.toFixed(2)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Create subject performance bar chart
+    function createSubjectPerformanceChart(data) {
+        const ctx = document.getElementById('subject-performance-chart').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (charts.subjectPerformance) {
+            charts.subjectPerformance.destroy();
+        }
+
+        charts.subjectPerformance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Average Score (%)',
+                    data: data.data,
+                    backgroundColor: '#ffc107',
+                    borderColor: '#ffc107',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Average: ${context.raw.toFixed(2)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Compare assessment periods
+    function compareAssessmentPeriods() {
+        const period1 = {
+            academic_year: $('#period1-academic-year').val(),
+            assessment_type: $('#period1-assessment-type').val()
+        };
+
+        const period2 = {
+            academic_year: $('#period2-academic-year').val(),
+            assessment_type: $('#period2-assessment-type').val()
+        };
+
+        // Validate that periods are different
+        if (period1.academic_year === period2.academic_year &&
+            period1.assessment_type === period2.assessment_type &&
+            period1.academic_year !== 'All') {
+            alert('Please select different periods for comparison');
+            return;
+        }
+
+        // Show loading state
+        $('#comparison-loader').show();
+        $('#comparison-content').hide();
+        $('#comparison-error').hide();
+        $('#comparison-results').slideDown();
+
+        $.ajax({
+            url: "{{ url_for('assessment.compare_assessments') }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                period1: period1,
+                period2: period2
+            }),
+            dataType: "json",
+            success: function(data) {
+                // Hide loader
+                $('#comparison-loader').hide();
+
+                // Update period labels
+                $('#period1-label').text(data.period1.label);
+                $('#period2-label').text(data.period2.label);
+
+                // Update comparison metrics
+                $('#avg-score-change').text(data.improvement.average_score_change.toFixed(2) + '%');
+                $('#avg-score-percent-change').text(
+                    (data.improvement.average_score_percent_change >= 0 ? '+' : '') +
+                    data.improvement.average_score_percent_change.toFixed(2) + '%'
+                );
+
+                // Add color class based on change
+                if (data.improvement.average_score_change > 0) {
+                    $('#avg-score-change, #avg-score-percent-change').addClass('positive-change').removeClass('negative-change');
+                } else if (data.improvement.average_score_change < 0) {
+                    $('#avg-score-change, #avg-score-percent-change').addClass('negative-change').removeClass('positive-change');
+                } else {
+                    $('#avg-score-change, #avg-score-percent-change').removeClass('positive-change negative-change');
+                }
+
+                // Update student count change
+                $('#student-count-change').text(
+                    (data.improvement.student_count_change >= 0 ? '+' : '') +
+                    data.improvement.student_count_change
+                );
+
+                // Update assessment count change
+                $('#assessment-count-change').text(
+                    (data.improvement.assessment_count_change >= 0 ? '+' : '') +
+                    data.improvement.assessment_count_change
+                );
+
+                // Find most improved subject
+                if (data.subject_comparison.length > 0) {
+                    const mostImproved = data.subject_comparison[0];
+                    $('#most-improved-subject').text(mostImproved.subject);
+                    $('#most-improved-subject-change').text(
+                        (mostImproved.difference >= 0 ? '+' : '') +
+                        mostImproved.difference.toFixed(2) + '%'
+                    );
+
+                    // Add color class based on change
+                    if (mostImproved.difference > 0) {
+                        $('#most-improved-subject-change').addClass('positive-change').removeClass('negative-change');
+                    } else if (mostImproved.difference < 0) {
+                        $('#most-improved-subject-change').addClass('negative-change').removeClass('positive-change');
+                    } else {
+                        $('#most-improved-subject-change').removeClass('positive-change negative-change');
+                    }
+                }
+
+                // Create subject comparison chart
+                createSubjectComparisonChart(data.subject_comparison);
+
+                // Create competency comparison chart
+                createCompetencyComparisonChart(data.period1.competency, data.period2.competency);
+
+                // Show comparison results section
+                $('#comparison-content').show();
+
+                // Scroll to comparison results
+                $('html, body').animate({
+                    scrollTop: $('#comparison-results').offset().top - 100
+                }, 500);
+            },
+            error: function(xhr, status, error) {
+                console.error("Error comparing assessment periods:", error);
+
+                // Hide loader
+                $('#comparison-loader').hide();
+
+                // Show error message
+                if (!$('#comparison-error').length) {
+                    $('#comparison-results').append(
+                        `<div id="comparison-error" class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Failed to compare assessment periods. Please try again later.
+                        </div>`
+                    );
+                } else {
+                    $('#comparison-error').show();
+                }
+
+                // Scroll to comparison results
+                $('html, body').animate({
+                    scrollTop: $('#comparison-results').offset().top - 100
+                }, 500);
+            },
+            timeout: 20000 // 20 seconds timeout
+        });
+    }
+
+    // Create subject comparison chart
+    function createSubjectComparisonChart(data) {
+        const ctx = document.getElementById('subject-comparison-chart').getContext('2d');
+
+        // Limit to top 5 subjects with biggest difference
+        const topSubjects = data.slice(0, 5);
+
+        // Destroy existing chart if it exists
+        if (charts.subjectComparison) {
+            charts.subjectComparison.destroy();
+        }
+
+        charts.subjectComparison = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topSubjects.map(item => item.subject),
+                datasets: [
+                    {
+                        label: 'Period 1',
+                        data: topSubjects.map(item => item.period1),
+                        backgroundColor: '#212529',
+                        borderColor: '#212529',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Period 2',
+                        data: topSubjects.map(item => item.period2),
+                        backgroundColor: '#ffc107',
+                        borderColor: '#ffc107',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Subject Performance Comparison'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.raw || 0;
+                                return `${label}: ${value.toFixed(2)}%`;
+                            },
+                            afterBody: function(context) {
+                                const index = context[0].dataIndex;
+                                const diff = topSubjects[index].difference;
+                                return `Difference: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Create competency comparison chart
+    function createCompetencyComparisonChart(competency1, competency2) {
+        const ctx = document.getElementById('competency-comparison-chart').getContext('2d');
+
+        // Get all unique competency levels
+        const allLevels = [...new Set([...Object.keys(competency1), ...Object.keys(competency2)])];
+
+        // Prepare data for each period
+        const period1Data = allLevels.map(level => competency1[level] || 0);
+        const period2Data = allLevels.map(level => competency2[level] || 0);
+
+        // Destroy existing chart if it exists
+        if (charts.competencyComparison) {
+            charts.competencyComparison.destroy();
+        }
+
+        charts.competencyComparison = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: allLevels,
+                datasets: [
+                    {
+                        label: 'Period 1',
+                        data: period1Data,
+                        backgroundColor: '#212529',
+                        borderColor: '#212529',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Period 2',
+                        data: period2Data,
+                        backgroundColor: '#ffc107',
+                        borderColor: '#ffc107',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Competency Level Distribution'
+                    }
+                }
+            }
+        });
+    }
+
+    // Export assessment data
+    function exportAssessmentData() {
+        // Create a form to submit the export request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ url_for('assessment.export_data') }}";
+
+        // Add filters as hidden inputs
+        for (const [key, value] of Object.entries(currentFilters)) {
+            if (value) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+        }
+
+        // Add the form to the document and submit it
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    }
+
+    // Create gender performance chart
+    function createGenderPerformanceChart(data) {
+        const ctx = document.getElementById('gender-performance-chart').getContext('2d');
+
+        // Destroy existing chart if it exists
+        if (charts.genderPerformance) {
+            charts.genderPerformance.destroy();
+        }
+
+        // Define colors for genders
+        const genderColors = {
+            'Male': '#212529',
+            'Female': '#ffc107',
+            'Other': '#6c757d'
+        };
+
+        // Create color array based on labels
+        const colors = data.labels.map(gender => genderColors[gender] || '#212529');
+
+        // Create new chart
+        charts.genderPerformance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Average Score (%)',
+                    data: data.data,
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Create consolidated performance table
+    function createConsolidatedPerformanceTable(data) {
+        // Get the grades and schools
+        const grades = data.grades;
+        const schools = data.schools;
+        const cities = data.cities;
+        const overall = data.overall;
+
+        // Create header row with grades
+        let headerHtml = '<th>School</th>';
+        grades.forEach(grade => {
+            headerHtml += `<th>${grade}</th>`;
+        });
+        $('#consolidated-header-row').html(headerHtml);
+
+        // Create table body
+        let tableHtml = '';
+
+        // Add overall row (Akanksha)
+        tableHtml += '<tr class="table-dark">';
+        tableHtml += '<td><strong>Akanksha</strong></td>';
+
+        grades.forEach(grade => {
+            const value = overall.grades[grade];
+            if (value !== null) {
+                // Color code based on performance
+                let colorClass = '';
+                if (value < 25) {
+                    colorClass = 'bg-danger text-white';
+                } else if (value < 50) {
+                    colorClass = 'bg-warning';
+                } else if (value < 75) {
+                    colorClass = 'bg-info text-white';
+                } else {
+                    colorClass = 'bg-success text-white';
+                }
+
+                tableHtml += `<td class="${colorClass}">${value}%</td>`;
+            } else {
+                tableHtml += '<td>-</td>';
+            }
+        });
+        tableHtml += '</tr>';
+
+        // Add city rows
+        Object.keys(cities).forEach(city => {
+            tableHtml += `<tr class="table-secondary">`;
+            tableHtml += `<td><strong>${city}</strong></td>`;
+
+            grades.forEach(grade => {
+                const value = cities[city].grades[grade];
+                if (value !== null) {
+                    // Color code based on performance
+                    let colorClass = '';
+                    if (value < 25) {
+                        colorClass = 'bg-danger text-white';
+                    } else if (value < 50) {
+                        colorClass = 'bg-warning';
+                    } else if (value < 75) {
+                        colorClass = 'bg-info text-white';
+                    } else {
+                        colorClass = 'bg-success text-white';
+                    }
+
+                    tableHtml += `<td class="${colorClass}">${value}%</td>`;
+                } else {
+                    tableHtml += '<td>-</td>';
+                }
+            });
+            tableHtml += '</tr>';
+        });
+
+        // Add school rows
+        Object.keys(schools).forEach(school => {
+            tableHtml += '<tr>';
+            tableHtml += `<td>${school}</td>`;
+
+            grades.forEach(grade => {
+                const value = schools[school].grades[grade];
+                if (value !== null) {
+                    // Color code based on performance
+                    let colorClass = '';
+                    if (value < 25) {
+                        colorClass = 'bg-danger text-white';
+                    } else if (value < 50) {
+                        colorClass = 'bg-warning';
+                    } else if (value < 75) {
+                        colorClass = 'bg-info text-white';
+                    } else {
+                        colorClass = 'bg-success text-white';
+                    }
+
+                    tableHtml += `<td class="${colorClass}">${value}%</td>`;
+                } else {
+                    tableHtml += '<td>-</td>';
+                }
+            });
+            tableHtml += '</tr>';
+        });
+
+        // Update table body
+        $('#consolidated-table-body').html(tableHtml);
+
+        // Add export button functionality
+        $('#export-consolidated-btn').off('click').on('click', function() {
+            exportTableToCSV('consolidated-performance-table', 'consolidated_performance.csv');
+        });
+    }
+
+    // Create subject performance table
+    function createSubjectPerformanceTable(data) {
+        // Get the subjects and schools
+        const subjects = data.subjects;
+        const subjectAbbr = data.subject_abbr;
+        const schools = data.schools;
+        const cities = data.cities;
+        const overall = data.overall;
+
+        // Create header row with subjects
+        let headerHtml = '<th>School</th>';
+        subjects.forEach(subject => {
+            // Use abbreviation if available
+            const abbr = subjectAbbr[subject] || subject;
+            headerHtml += `<th>${abbr}</th>`;
+        });
+        $('#subject-header-row').html(headerHtml);
+
+        // Create table body
+        let tableHtml = '';
+
+        // Add overall row (Akanksha)
+        tableHtml += '<tr class="table-dark">';
+        tableHtml += '<td><strong>Akanksha</strong></td>';
+
+        subjects.forEach(subject => {
+            const value = overall.subjects[subject];
+            if (value !== null) {
+                // Color code based on performance
+                let colorClass = '';
+                if (value < 25) {
+                    colorClass = 'bg-danger text-white';
+                } else if (value < 50) {
+                    colorClass = 'bg-warning';
+                } else if (value < 75) {
+                    colorClass = 'bg-info text-white';
+                } else {
+                    colorClass = 'bg-success text-white';
+                }
+
+                tableHtml += `<td class="${colorClass}">${value}%</td>`;
+            } else {
+                tableHtml += '<td>-</td>';
+            }
+        });
+        tableHtml += '</tr>';
+
+        // Add city rows
+        Object.keys(cities).forEach(city => {
+            tableHtml += `<tr class="table-secondary">`;
+            tableHtml += `<td><strong>${city}</strong></td>`;
+
+            subjects.forEach(subject => {
+                const value = cities[city].subjects[subject];
+                if (value !== null) {
+                    // Color code based on performance
+                    let colorClass = '';
+                    if (value < 25) {
+                        colorClass = 'bg-danger text-white';
+                    } else if (value < 50) {
+                        colorClass = 'bg-warning';
+                    } else if (value < 75) {
+                        colorClass = 'bg-info text-white';
+                    } else {
+                        colorClass = 'bg-success text-white';
+                    }
+
+                    tableHtml += `<td class="${colorClass}">${value}%</td>`;
+                } else {
+                    tableHtml += '<td>-</td>';
+                }
+            });
+            tableHtml += '</tr>';
+        });
+
+        // Add school rows
+        Object.keys(schools).forEach(school => {
+            tableHtml += '<tr>';
+            tableHtml += `<td>${school}</td>`;
+
+            subjects.forEach(subject => {
+                const value = schools[school].subjects[subject];
+                if (value !== null) {
+                    // Color code based on performance
+                    let colorClass = '';
+                    if (value < 25) {
+                        colorClass = 'bg-danger text-white';
+                    } else if (value < 50) {
+                        colorClass = 'bg-warning';
+                    } else if (value < 75) {
+                        colorClass = 'bg-info text-white';
+                    } else {
+                        colorClass = 'bg-success text-white';
+                    }
+
+                    tableHtml += `<td class="${colorClass}">${value}%</td>`;
+                } else {
+                    tableHtml += '<td>-</td>';
+                }
+            });
+            tableHtml += '</tr>';
+        });
+
+        // Update table body
+        $('#subject-table-body').html(tableHtml);
+
+        // Add export button functionality
+        $('#export-subject-btn').off('click').on('click', function() {
+            exportTableToCSV('subject-performance-table', 'subject_performance.csv');
+        });
+    }
+
+    // Export table to CSV
+    function exportTableToCSV(tableId, filename) {
+        const table = document.getElementById(tableId);
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = [], cols = rows[i].querySelectorAll('td, th');
+
+            for (let j = 0; j < cols.length; j++) {
+                // Get the text content and remove any commas
+                let data = cols[j].textContent.replace(/,/g, '');
+                // Remove the % sign for numeric values
+                data = data.replace(/%/g, '');
+                // Add quotes around the data
+                row.push('"' + data + '"');
+            }
+
+            csv.push(row.join(','));
+        }
+
+        // Download CSV file
+        downloadCSV(csv.join('\n'), filename);
+    }
+
+    // Download CSV file
+    function downloadCSV(csv, filename) {
+        const csvFile = new Blob([csv], {type: 'text/csv'});
+        const downloadLink = document.createElement('a');
+
+        // Set file name
+        downloadLink.download = filename;
+
+        // Create a link to the file
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+
+        // Hide download link
+        downloadLink.style.display = 'none';
+
+        // Add the link to DOM
+        document.body.appendChild(downloadLink);
+
+        // Click download link
+        downloadLink.click();
+
+        // Remove link from DOM
+        document.body.removeChild(downloadLink);
+    }
+</script>
+{% endblock %}

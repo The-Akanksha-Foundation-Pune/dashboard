@@ -1,0 +1,38 @@
+name: Deploy to EC2 Server
+
+on:
+  push:
+    branches:
+      - main  # Trigger deployment on pushes to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup SSH Key
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}  # Replace with your EC2_SSH_KEY
+
+      - name: Upload Files to EC2 using rsync
+        run: |
+          rsync -avz --exclude '.github' \
+          -e "ssh -i ~/Downloads/python1.pem" \
+          . ubuntu@${{ secrets.EC2_HOST }}:~/app
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+
+      - name: Restart Gunicorn and Reload Caddy
+        run: |
+          ssh -i ~/Downloads/python1.pem ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ~/app
+            # Restart Gunicorn
+            sudo systemctl restart myapp
+
+            # Reload Caddy
+            sudo systemctl reload caddy
+          EOF

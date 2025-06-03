@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empower Institute - Login</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+      body, html {
+         /* height: 100%; */ /* Avoid conflicts if using vh-100 */
+         /* background-color: #f8f9fa;  Light grey background */
+         background: linear-gradient(135deg, #ece9e6 0%, #ffffff 100%); /* Subtle gradient */
+      }
+      .login-container {
+         min-height: 100vh;
+      }
+      .card {
+         border: none;
+         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+      .flash-messages-container {
+         position: absolute;
+         top: 1rem;
+         left: 50%;
+         transform: translateX(-50%);
+         z-index: 1050; /* Ensure it's above other content */
+         width: 90%;
+         max-width: 600px; /* Limit width */
+      }
+      /* Ensure dark text on warning buttons for theme consistency */
+      .btn-warning {
+        color: var(--dark-text, #212529) !important; /* Use theme variable or fallback */
+        background-color: var(--primary-color, #FFC107);
+        border-color: var(--primary-color, #FFC107);
+      }
+      .btn-warning:hover {
+        color: var(--dark-text, #212529) !important;
+        background-color: var(--accent-color, #FFDA63); /* Use lighter yellow from theme */
+        border-color: var(--accent-color, #FFDA63);
+      }
+    </style>
+</head>
+<body>
+
+    <!-- Flash Message Display (Moved to top) -->
+    <div class="flash-messages-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div>
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category or 'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </div>
+    <!-- End Flash Message Display -->
+
+    <!-- Loading Overlay (Keep as is) -->
+    <div id="loading-overlay">
+        <!-- Custom Sun Loader -->
+        <div class="loading-indicator">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                  <clipPath id="sun-clip">
+                    <rect x="0" y="100%" width="100%" height="0%" /> <!-- Height controlled by animation -->
+                  </clipPath>
+                  <symbol id="sun-shape" viewBox="0 0 100 100">
+                    <!-- Sun Body - Top Half Only -->
+                    <path d="M 25 50 A 25 25 0 0 1 75 50 Z" />
+                    <!-- Sun Rays (Top Half) -->
+                    <g transform="translate(50,50)">
+                        <!-- Ensure only top/side rays are present -->
+                        <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(0)" />
+                        <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(45)" />
+                        <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(90)" />
+                        <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(-45)" />
+                        <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(-90)" />
+                    </g>
+                  </symbol>
+                </defs>
+                <use href="#sun-shape" class="sun-background" stroke="#FFFDE7" />
+                <use href="#sun-shape" class="sun-foreground" stroke="var(--primary-color)" clip-path="url(#sun-clip)" />
+              </svg>
+              <p>Loading ....</p> <!-- Updated Text -->
+        </div>
+        <!-- End Custom Sun Loader -->
+    </div>
+
+    <!-- Main Login/Content Area -->
+    <div class="container d-flex justify-content-center align-items-center login-container">
+      <div class="row w-100">
+        <div class="col-md-6 col-lg-5 col-xl-4 mx-auto">
+          <div class="card p-4 p-md-5">
+            <div class="card-body text-center">
+                <img src="{{ url_for('static', filename='images/akanksha logo.png') }}" alt="Empower Logo" width="100" class="mb-4"> <!-- Updated Logo -->
+                <h1>Welcome to Empower</h1>
+                {% if not logged_in %}
+                    <p class="text-muted mb-4">Please sign in using your Google account.</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-warning btn-lg w-100" id="login-button">
+                        <i class="bi bi-google me-2"></i> Sign in with Google
+                    </a>
+                {% else %}
+                    <div class="user-info mt-4">
+                        <h2>Welcome back!</h2>
+                        {% if user_info %}
+                            <img src="{{ user_info.picture }}" alt="Profile Picture" width="80" height="80" class="rounded-circle img-thumbnail mb-3">
+                            <p class="lead"><strong>{{ user_info.name }}</strong></p>
+                            <p class="text-muted">{{ user_info.email }}</p>
+                            <a href="/dashboard" class="btn btn-warning mt-3">Go to Dashboard</a> <!-- Link to Dashboard -->
+                        {% else %}
+                            <p class="text-muted">You are logged in.</p>
+                            <p class="text-danger">Could not fetch user information.</p>
+                        {% endif %}
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary mt-3">Logout</a>
+                    </div>
+                {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        // Show loading overlay on login button click
+        const loginButton = document.getElementById('login-button');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        if (loginButton && loadingOverlay) {
+            // Using 'click' is appropriate here since it's a link, not a form submit button
+            loginButton.addEventListener('click', function(event) {
+                // Prevent immediate navigation if needed, though usually not necessary for simple links
+                // event.preventDefault();
+                loadingOverlay.style.display = 'flex';
+                // Optional: Disable the link/button visually (though navigation will proceed)
+                loginButton.style.pointerEvents = 'none';
+                loginButton.style.opacity = '0.7';
+                loginButton.textContent = 'Signing in...'; // Change text
+            });
+        }
+
+        // Optional: Hide loader if back button is used after failed login or navigation away
+        // window.addEventListener('pageshow', function(event) {
+        //     if (loadingOverlay && loadingOverlay.style.display === 'flex') { // Only hide if it was visible
+        //         loadingOverlay.style.display = 'none';
+        //         // Reset button state if needed
+        //         if (loginButton) {
+        //             loginButton.style.pointerEvents = 'auto';
+        //             loginButton.style.opacity = '1';
+        //             loginButton.innerHTML = '<i class="bi bi-google me-2"></i> Sign in with Google';
+        //         }
+        //     }
+        // });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

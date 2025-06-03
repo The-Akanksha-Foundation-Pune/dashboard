@@ -1,0 +1,1688 @@
+{% extends "base.html" %}
+
+{% block title %}Leadership Dashboard - Empower Institute{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 1rem;
+    }
+    .metric-card {
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+      <!-- == Dashboard Overview Content == -->
+      <div id="dashboard-overview-content">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+          <h1 class="h2">Leadership Dashboard</h1>
+        </div>
+
+        <!-- Coming Soon Message -->
+        <div class="row justify-content-center">
+          <div class="col-md-8">
+            <div class="card shadow-sm">
+              <div class="card-body text-center py-5">
+                <i class="bi bi-house-door-fill display-1 text-primary mb-4"></i>
+                <h1 class="display-4 fw-bold">Dashboard</h1>
+                <p class="lead text-muted mb-4">We're working on something amazing for you!</p>
+                <div class="alert alert-info">
+                  <i class="bi bi-info-circle-fill me-2"></i>
+                  This feature is coming soon. Please check back later.
+                </div>
+                <a href="{{ url_for('demographics.view') }}" class="btn btn-primary mt-3">
+                  <i class="bi bi-people-fill me-2"></i>Go to Demographics
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- == End Dashboard Overview Content == -->
+
+      <!-- == Demographics Content (Initially Hidden) == -->
+      <div id="demographics-content">
+          <!-- Top row for Tabs and Filters -->
+          <div class="row align-items-center mb-3">
+            <!-- Tabs (Left) -->
+            <div class="col-auto">
+              <ul class="nav nav-pills" id="demographics-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="btn-student-numbers" data-bs-toggle="pill" data-bs-target="#student-numbers-view" type="button" role="tab" aria-controls="student-numbers-view" aria-selected="true">Student Numbers</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="btn-attendance" data-bs-toggle="pill" data-bs-target="#attendance-view" type="button" role="tab" aria-controls="attendance-view" aria-selected="false">Attendance</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="btn-dropouts" data-bs-toggle="pill" data-bs-target="#dropouts-view" type="button" role="tab" aria-controls="dropouts-view" aria-selected="false">Dropouts</button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Filters (Right) -->
+            <div class="col d-flex justify-content-end align-items-center" id="demographics-filters-common">
+              <div class="me-2">
+                <label for="academicYearFilter" class="form-label mb-0 me-1">Academic Year:</label>
+                <select class="form-select form-select-sm d-inline-block w-auto" id="academicYearFilter" onchange="loadDemographicsTable()">
+                  <!-- Options loaded by JS -->
+                </select>
+              </div>
+              <div class="me-2">
+                <label for="attendance-month-filter" class="form-label mb-0 me-1">Month:</label>
+                <select class="form-select form-select-sm d-inline-block w-auto" id="attendance-month-filter" onchange="loadDemographicsTable()">
+                  <option selected value="All">All Months</option>
+                  <!-- Options will be populated by JavaScript -->
+                </select>
+              </div>
+              <div class="me-2">
+                <label for="cityFilter" class="form-label mb-0 me-1">City:</label>
+                <select class="form-select form-select-sm d-inline-block w-auto" id="cityFilter" onchange="loadDemographicsTable()">
+                  <!-- Options loaded by JS -->
+                </select>
+              </div>
+              <div>
+                <label for="genderFilter" class="form-label mb-0 me-1">Gender:</label>
+                <select class="form-select form-select-sm d-inline-block w-auto" id="genderFilter" onchange="loadDemographicsTable()">
+                  <!-- Options loaded by JS -->
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content" id="demographics-tab-content">
+
+            <!-- Student Numbers View (Existing Content) -->
+            <div class="tab-pane fade show active" id="student-numbers-view" role="tabpanel" aria-labelledby="btn-student-numbers">
+
+              {% if role == 'LT' or role == 'SL' %}
+                  <!-- Content visible only for LT or SL roles -->
+                  <!-- Scorecards Row -->
+                  <div class="row mb-4" id="demographics-scorecards">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Students</h5>
+                                <p class="card-text fs-4 fw-bold" id="total-students-card">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">Male Students</h5>
+                                <p class="card-text fs-4 fw-bold" id="male-students-card">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="card text-center shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">Female Students</h5>
+                                <p class="card-text fs-4 fw-bold" id="female-students-card">-</p>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+                  <!-- Graph/Table Area -->
+                  <div class="mt-4">
+                    <!-- Title and Download Button Row -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h4>Student Counts by School and Grade</h4>
+                      <button id="download-demographics-btn" class="btn btn-outline-secondary btn-sm" title="Download Table Data" onclick="downloadDemographicsData()">
+                        <i class="fas fa-file-excel text-success"></i> <span class="d-none d-sm-inline">Download</span>
+                      </button>
+                    </div>
+                    <!-- Loading Indicator -->
+                    <div id="demographics-loading" class="loading-indicator" style="display: none;">
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                          <clipPath id="sun-clip">
+                            <rect x="0" y="100%" width="100%" height="0%" /> <!-- Height controlled by animation -->
+                          </clipPath>
+                          <symbol id="sun-shape" viewBox="0 0 100 100">
+                            <path d="M 25 50 A 25 25 0 0 1 75 50 Z" />
+                            <g transform="translate(50,50)">
+                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(0)" />
+                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(45)" />
+                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(90)" />
+                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(-45)" />
+                                <line x1="0" y1="-30" x2="0" y2="-40" stroke-width="5" stroke-linecap="round" transform="rotate(-90)" />
+                            </g>
+                          </symbol>
+                        </defs>
+
+                        <use href="#sun-shape" class="sun-background" stroke="#FFFDE7" />
+                        <use href="#sun-shape" class="sun-foreground" stroke="var(--primary-color)" clip-path="url(#sun-clip)" />
+                      </svg>
+                      <p>Loading ....</p>
+                     </div>
+                     <!-- Container for the dynamic table -->
+                    <div class="table-responsive">
+                      <div id="demographics-table-container">
+                        <!-- Table HTML will be injected here by JS -->
+                        <p class="text-center text-muted">Select filters to load data.</p>
+                      </div>
+                    </div>
+                  </div>
+              {% else %}
+                  <!-- Message for users without LT or SL role -->
+                  <p class="text-muted text-center mt-4">You do not have permission to view Student Number details.</p>
+              {% endif %}
+             </div> <!-- End of student-numbers-view -->
+
+            <!-- Attendance View -->
+            <div class="tab-pane fade" id="attendance-view" role="tabpanel" aria-labelledby="btn-attendance">
+
+              <!-- Nav Pills for Attendance Sub-sections -->
+              <div class="pills-scroll-container">
+                <ul class="nav nav-pills mb-3 mt-3 mobile-pills-inline" id="attendance-pills-tab" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pills-student-att-tab" data-bs-toggle="pill" data-bs-target="#pills-student-att" type="button" role="tab" aria-controls="pills-student-att" aria-selected="true">Student</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pills-parent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-parent-att" type="button" role="tab" aria-controls="pills-parent-att" aria-selected="false">Parent</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pills-swparent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-swparent-att" type="button" role="tab" aria-controls="pills-swparent-att" aria-selected="false">SW- Parent</button>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Tab Content for Attendance Sub-sections -->
+              <div class="tab-content" id="attendance-pills-tabContent">
+                <!-- Student Attendance View -->
+                <div class="tab-pane fade show active" id="pills-student-att" role="tabpanel" aria-labelledby="pills-student-att-tab" tabindex="0">
+                    <h5 class="mb-3">Student Attendance Percentage by Grade</h5>
+                    <!-- Download Button for Attendance Pivot -->
+                    <div class="text-end mb-2">
+                      <button id="download-attendance-pivot-btn" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-file-excel me-1"></i> Download
+                      </button>
+                    </div>
+                    <!-- Container for the dynamic attendance pivot table -->
+                    <div class="table-responsive">
+                      <div id="attendance-pivot-table-container">
+                        <!-- Table HTML will be injected here by JS -->
+                        <p class="text-center text-muted">Select filters to load student attendance data.</p>
+                      </div>
+                    </div>
+                </div>
+
+                <!-- Parent Attendance View -->
+                <div class="tab-pane fade" id="pills-parent-att" role="tabpanel" aria-labelledby="pills-parent-att-tab" tabindex="0">
+                  <h5 class="mb-3">Parent Attendance Details</h5>
+                   <!-- Download Button for Parent Attendance -->
+                    <div class="text-end mb-2">
+                      <button id="download-parent-attendance-btn" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-file-excel me-1"></i> Download
+                      </button>
+                    </div>
+                   <!-- Container for the dynamic parent attendance table -->
+                   <div class="table-responsive">
+                     <div id="parent-attendance-table-container">
+                       <!-- Parent table HTML will be injected here by JS -->
+                       <p class="text-center text-muted">Select filters to load parent attendance data.</p>
+                     </div>
+                   </div>
+                </div>
+
+                <!-- SW-Parent Attendance View -->
+                <div class="tab-pane fade" id="pills-swparent-att" role="tabpanel" aria-labelledby="pills-swparent-att-tab" tabindex="0">
+                  <h5 class="mb-3">Social Worker / Parent Attendance Details</h5>
+                  <!-- Download Button for SW Parent Attendance -->
+                  <div class="text-end mb-2">
+                    <button id="download-swparent-attendance-btn" class="btn btn-sm btn-outline-success">
+                      <i class="fas fa-file-excel me-1"></i> Download
+                    </button>
+                  </div>
+                  <!-- Container for the dynamic SW Parent attendance table -->
+                  <div id="sw-parent-attendance-table-container" class="mt-3 table-responsive">
+                    <div class="loading-indicator" style="display: none;">
+                      <!-- Sun SVG -->
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+                        <circle cx="50" cy="50" r="20" fill="orange" />
+                        <path id="sun-fill-sw" d="" fill="yellow" style="transition: d 0.5s ease-in-out;"></path> <!-- Unique ID -->
+                        <g id="sun-rays-sw">
+                          <!-- Rays will be added/animated by CSS/JS if needed -->
+                        </g>
+                      </svg>
+                    </div>
+                    <p class="text-center text-muted">Select filters to load SW - Parent attendance data.</p>
+                  </div>
+                </div>
+              </div>
+
+             </div>
+
+            <!-- Dropouts View -->
+            <div class="tab-pane fade" id="dropouts-view" role="tabpanel" aria-labelledby="btn-dropouts">
+                <p>Dropout data will be displayed here.</p>
+                <!-- Placeholder for future dropouts content -->
+            </div>
+
+          </div> <!-- End of tab-content -->
+
+     </div> <!-- End Demographics Content -->
+
+     <!-- No additional content here -->
+     </main>
+  </div>
+</div>
+
+<!-- Monthly Attendance Trend Modal -->
+<div class="modal fade" id="schoolMonthlyAttendanceModal" tabindex="-1" aria-labelledby="schoolMonthlyAttendanceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="schoolMonthlyAttendanceModalLabel">Monthly Attendance Trend</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Showing average student attendance percentage per month for: <strong id="modalSchoolName"></strong></p>
+        <div style="height: 400px;">
+            <canvas id="schoolMonthlyAttendanceChart"></canvas>
+        </div>
+        <div id="modalErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+        <div id="modalLoadingIndicator" class="text-center mt-2" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <!-- Trend Description Placeholder -->
+        <p id="modalTrendDescription" class="mt-3 small text-muted"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Parent Attendance Trend Modal -->
+<div class="modal fade" id="parentMonthlyAttendanceModal" tabindex="-1" aria-labelledby="parentMonthlyAttendanceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="parentMonthlyAttendanceModalLabel">Monthly Parent Attendance Trend</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Showing average parent attendance percentage per month for: <strong id="modalParentSchoolName"></strong></p>
+        <div style="height: 400px;">
+            <canvas id="parentMonthlyAttendanceChart"></canvas>
+        </div>
+        <div id="parentModalErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+        <div id="parentModalLoadingIndicator" class="text-center mt-2" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <!-- Trend Description Placeholder -->
+        <p id="parentModalTrendDescription" class="mt-3 small text-muted"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SW-Parent Monthly Trend Modal -->
+<div class="modal fade" id="swParentMonthlyModal" tabindex="-1" aria-labelledby="swParentMonthlyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="swParentMonthlyModalLabel">Monthly SW-Parent Attendance Trend</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Showing average SW-Parent attendance percentage per month for: <strong id="modalSwParentSchoolName"></strong></p>
+        <div style="height: 400px;">
+            <canvas id="swParentMonthlyChart"></canvas>
+        </div>
+        <div id="swParentModalErrorMsg" class="text-danger mt-2" style="display: none;"></div>
+        <div id="swParentModalLoadingIndicator" class="text-center mt-2" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <!-- Trend Description Placeholder -->
+        <p id="swParentModalTrendDescription" class="mt-3 small text-muted"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<!-- Helper function for trend calculation -->
+<script>
+// Helper function to calculate linear trend slope and return a description
+function calculateLinearTrend(yValues) {
+    const n = yValues.length;
+    // Only consider valid numerical data points for trend calculation
+    const validData = yValues.map((y, i) => ({ x: i, y: y }))
+                             .filter(point => typeof point.y === 'number' && isFinite(point.y));
+
+    const validPointsCount = validData.length;
+    if (validPointsCount < 2) {
+        return "Insufficient data points to determine a trend.";
+    }
+
+    // Calculate means
+    const sumX = validData.reduce((acc, point) => acc + point.x, 0);
+    const sumY = validData.reduce((acc, point) => acc + point.y, 0);
+    const meanX = sumX / validPointsCount;
+    const meanY = sumY / validPointsCount;
+
+    // Calculate slope
+    const numerator = validData.reduce((acc, point) => acc + (point.x - meanX) * (point.y - meanY), 0);
+    const denominator = validData.reduce((acc, point) => acc + Math.pow(point.x - meanX, 2), 0);
+
+    const slope = denominator !== 0 ? numerator / denominator : 0;
+
+    // Interpret the slope and return a description
+    const slopeThreshold = 0.75; // Example: A change of 0.75% per month
+    if (slope > slopeThreshold) {
+        return "Trend: Overall attendance shows a generally upward trend across the months.";
+    } else if (slope < -slopeThreshold) {
+        return "Trend: Overall attendance shows a generally downward trend across the months.";
+    } else {
+        return "Trend: Overall attendance remained relatively stable across the months.";
+    }
+}
+</script>
+
+<script>
+  // Register the datalabels plugin globally
+  Chart.register(ChartDataLabels);
+
+  // === Demographics Table & Filter Logic ===
+  const cityFilter = document.getElementById('cityFilter');
+  const genderFilter = document.getElementById('genderFilter');
+  const academicYearFilter = document.getElementById('academicYearFilter');
+  const attendanceMonthFilter = document.getElementById('attendance-month-filter');
+  let filtersLoaded = false;
+
+  // Function to fetch and populate filters
+  async function populateFilters() {
+    console.log("Attempting to populate demographics filters...");
+    try {
+      const response = await fetch('/demographics/filters');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Populate Cities
+      cityFilter.innerHTML = '<option selected value="All">All Cities</option>';
+      data.cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        cityFilter.appendChild(option);
+      });
+
+      // Populate Genders
+      genderFilter.innerHTML = '<option selected value="All">All Genders</option>';
+      for (const code in data.genders) {
+          const option = document.createElement('option');
+          option.value = code;
+          option.textContent = data.genders[code];
+          genderFilter.appendChild(option);
+      }
+
+      // Populate Academic Years
+      if (data.academic_years && data.academic_years.length > 0) {
+        academicYearFilter.innerHTML = '<option value="All">All Years</option>';
+        data.academic_years.forEach(year => {
+          academicYearFilter.innerHTML += `<option value="${year}">${year}</option>`;
+        });
+      } else {
+        academicYearFilter.innerHTML = '<option value="All">All Years</option>';
+      }
+
+      // Populate Attendance Months
+      attendanceMonthFilter.innerHTML = '<option selected value="All">All Months</option>';
+      if (data.attendance_months && data.attendance_months.length > 0) {
+        data.attendance_months.forEach(month => {
+          const option = document.createElement('option');
+          option.value = month;
+          option.textContent = month;
+          attendanceMonthFilter.appendChild(option);
+        });
+      }
+
+      filtersLoaded = true;
+      console.log("Filters populated successfully.");
+      loadDemographicsTable();
+
+    } catch (error) {
+      console.error("Error fetching or populating filters:", error);
+      const tableContainer = document.getElementById('demographics-table-container');
+      tableContainer.innerHTML = '<p class="text-danger">Error loading filters. Please try refreshing.</p>';
+    } finally {
+      if (academicYearFilter.options.length === 0) {
+        academicYearFilter.innerHTML = '<option value="All">All Years</option>';
+      }
+      if (cityFilter.options.length === 0) {
+        cityFilter.innerHTML = '<option value="All">All Cities</option>';
+      }
+      if (genderFilter.options.length === 0) {
+        genderFilter.innerHTML = '<option selected value="All">All Genders</option>';
+      }
+      if (attendanceMonthFilter.options.length === 0) {
+        attendanceMonthFilter.innerHTML = '<option selected value="All">All Months</option>';
+      }
+    }
+  }
+
+  // Function to load table data based on filters
+  async function loadDemographicsTable() {
+    console.log("loadDemographicsTable called.");
+    if (!filtersLoaded) {
+      console.log("loadDemographicsTable: Filters not yet loaded, skipping table load.");
+      return;
+    }
+
+    const academicYear = document.getElementById('academicYearFilter')?.value;
+    const month = document.getElementById('attendance-month-filter')?.value;
+    const city = document.getElementById('cityFilter')?.value;
+    const gender = document.getElementById('genderFilter')?.value;
+
+    const studentNumbersTabActive = document.getElementById('btn-student-numbers')?.classList.contains('active');
+    const attendanceTabActive = document.getElementById('btn-attendance')?.classList.contains('active');
+
+    console.log(`Loading table data with filters - Year: ${academicYear}, Month: ${month}, City: ${city}, Gender: ${gender}`);
+
+    let targetContainerId;
+    let dataUrl;
+    let scorecardsContainer = document.getElementById('demographics-scorecards');
+    let studentTableContainer = document.getElementById('demographics-table-container');
+    let attendanceTableContainer = document.getElementById('attendance-pivot-table-container');
+    let parentAttendanceTableContainer = document.getElementById('parent-attendance-table-container');
+    let swParentAttendanceTableContainer = document.getElementById('sw-parent-attendance-table-container');
+
+    if (studentNumbersTabActive) {
+      targetContainerId = 'demographics-table-container';
+      dataUrl = "{{ url_for('demographics.get_demographics_table_data') }}";
+      if (attendanceTableContainer) attendanceTableContainer.innerHTML = '';
+      if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '';
+      if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '';
+      if (scorecardsContainer) scorecardsContainer.style.display = 'flex';
+      else console.error("Scorecard container not found!");
+    } else if (attendanceTabActive) {
+      const studentAttSubTabActive = document.getElementById('pills-student-att-tab')?.classList.contains('active');
+      const parentAttSubTabActive = document.getElementById('pills-parent-att-tab')?.classList.contains('active');
+      const swParentAttSubTabActive = document.getElementById('pills-swparent-att-tab')?.classList.contains('active');
+
+      console.log(`Attendance main tab active. Student sub-tab: ${studentAttSubTabActive}, Parent sub-tab: ${parentAttSubTabActive}, SW Parent sub-tab: ${swParentAttSubTabActive}`);
+
+      if (studentAttSubTabActive) {
+          console.log("Student attendance sub-tab is active, preparing to load data");
+          targetContainerId = 'attendance-pivot-table-container';
+          dataUrl = "{{ url_for('demographics.get_attendance_pivot_data') }}";
+          console.log("Student attendance data URL:", dataUrl);
+
+          // Check if containers exist
+          console.log("Student table container exists:", !!studentTableContainer);
+          console.log("Parent attendance container exists:", !!parentAttendanceTableContainer);
+          console.log("SW Parent attendance container exists:", !!swParentAttendanceTableContainer);
+
+          if (studentTableContainer) studentTableContainer.innerHTML = '';
+          if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '';
+          if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '';
+          if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+      } else if (parentAttSubTabActive) {
+          targetContainerId = 'parent-attendance-table-container';
+          dataUrl = "{{ url_for('demographics.get_parent_attendance_data') }}";
+          if (studentTableContainer) studentTableContainer.innerHTML = '';
+          if (attendanceTableContainer) attendanceTableContainer.innerHTML = '';
+          if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '';
+          if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+      } else if (swParentAttSubTabActive) {
+          targetContainerId = 'sw-parent-attendance-table-container';
+          dataUrl = "{{ url_for('demographics.get_sw_parent_attendance_data') }}";
+          if (studentTableContainer) studentTableContainer.innerHTML = '';
+          if (attendanceTableContainer) attendanceTableContainer.innerHTML = '';
+          if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '';
+          if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+      } else {
+         console.log("Other/No attendance sub-tab active, clearing all attendance tables.");
+        if (attendanceTableContainer) attendanceTableContainer.innerHTML = '<p class="text-center text-muted">Select filters and ensure the \'Student\' sub-tab is active.</p>';
+        if (parentAttendanceTableContainer) parentAttendanceTableContainer.innerHTML = '<p class="text-center text-muted">Select filters and ensure the \'Parent\' sub-tab is active.</p>';
+        if (swParentAttendanceTableContainer) swParentAttendanceTableContainer.innerHTML = '<p class="text-center text-muted">Select filters and ensure the \'SW - Parent\' sub-tab is active.</p>';
+        if (studentTableContainer) studentTableContainer.innerHTML = '';
+        if (scorecardsContainer) scorecardsContainer.style.display = 'none';
+        return;
+      }
+    } else {
+      console.log("No relevant tab active, not loading table data.");
+      return;
+    }
+
+    const tableContainer = document.getElementById(targetContainerId);
+    if (!tableContainer) {
+      console.error(`Target container '${targetContainerId}' not found.`);
+      return;
+    }
+
+    const loadingIndicator = document.getElementById('loading-indicator-sun');
+    if (loadingIndicator) loadingIndicator.style.display = 'flex';
+    tableContainer.innerHTML = '';
+    if (studentNumbersTabActive && scorecardsContainer) {
+        scorecardsContainer.style.display = 'flex';
+        document.getElementById('total-students-card').textContent = '0';
+        document.getElementById('male-students-card').textContent = '0';
+        document.getElementById('female-students-card').textContent = '0';
+    }
+
+    try {
+      console.log(`Fetching data from ${dataUrl} with params:`, {
+        academic_year: academicYear,
+        month: month,
+        city: city,
+        gender: gender
+      });
+
+      const response = await fetch(dataUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          academic_year: academicYear,
+          month: month,
+          city: city,
+          gender: gender
+        })
+      });
+
+      console.log(`Response status: ${response.status} ${response.statusText}`);
+      console.log(`Response headers:`, Object.fromEntries([...response.headers]));
+
+      if (!response.ok) {
+        console.error(`Error response received: ${response.status} ${response.statusText}`);
+
+        // Clone the response before reading it to avoid the "body stream already read" error
+        const responseClone = response.clone();
+
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error("Error data:", errorData);
+          throw new Error(errorData.error || `HTTP error ${response.status} fetching ${dataUrl}`);
+        } catch (jsonError) {
+          console.error("Could not parse error response as JSON:", jsonError);
+          try {
+            const textResponse = await responseClone.text();
+            console.error("Error response text:", textResponse.substring(0, 500) + (textResponse.length > 500 ? "..." : ""));
+            throw new Error(`HTTP error ${response.status} fetching ${dataUrl}: ${textResponse.substring(0, 100)}`);
+          } catch (textError) {
+            console.error("Could not read response as text either:", textError);
+            throw new Error(`HTTP error ${response.status} fetching ${dataUrl}`);
+          }
+        }
+      }
+
+      console.log("Response OK, parsing JSON...");
+      let data;
+
+      // Clone the response before reading it to avoid the "body stream already read" error
+      const responseClone = response.clone();
+
+      try {
+        data = await response.json();
+        console.log("Data received successfully:", {
+          hasHtmlTable: !!data.html_table,
+          htmlTableLength: data.html_table ? data.html_table.length : 0,
+          hasScoreCards: !!data.scorecards,
+          otherKeys: Object.keys(data).filter(k => k !== 'html_table' && k !== 'scorecards')
+        });
+      } catch (jsonError) {
+        console.error("Error parsing response JSON:", jsonError);
+        try {
+          const textResponse = await responseClone.text();
+          console.error("Response text (first 500 chars):", textResponse.substring(0, 500) + (textResponse.length > 500 ? "..." : ""));
+          throw new Error(`Failed to parse response as JSON: ${jsonError.message}`);
+        } catch (textError) {
+          console.error("Could not read response as text either:", textError);
+          throw new Error(`Failed to parse response: ${jsonError.message}`);
+        }
+      }
+
+      if (studentNumbersTabActive && data.scorecards && scorecardsContainer) {
+          scorecardsContainer.style.display = 'flex';
+          updateScorecards(data.scorecards);
+      } else if (studentNumbersTabActive && scorecardsContainer) {
+          scorecardsContainer.style.display = 'none';
+      }
+
+      tableContainer.innerHTML = data.html_table;
+      console.log(`${targetContainerId} loaded successfully.`);
+
+      if (targetContainerId === 'parent-attendance-table-container') {
+          console.log("Parent attendance table loaded.");
+          // Add any specific JS needed for the parent table here
+      }
+
+    } catch (error) {
+      console.error('Error loading table data:', error);
+      tableContainer.innerHTML = `<p class="text-danger text-center">Error loading data: ${error.message}</p>`;
+    } finally {
+      if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+  }
+
+  // Animation function for count-up effect
+  function animateValue(element, start, end, duration) {
+    if (!element) {
+        console.warn("animateValue: Element not found");
+        return;
+    }
+    console.log(`animateValue called for ${element.id}: start=${start}, end=${end}, duration=${duration}`);
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const elapsed = timestamp - startTimestamp;
+      const progress = Math.min(elapsed / duration, 1);
+      const currentValue = Math.floor(progress * (end - start) + start);
+      console.log(`Step for ${element.id}: elapsed=${elapsed.toFixed(0)}ms, progress=${progress.toFixed(2)}, currentVal=${currentValue}`);
+      element.textContent = currentValue.toLocaleString();
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        element.textContent = end.toLocaleString();
+        console.log(`Animation finished for ${element.id}`);
+      }
+    };
+    window.requestAnimationFrame(step);
+
+  }
+
+  // Function to update scorecards with animation
+  function updateScorecards(scorecardData) {
+    console.log("updateScorecards called with data:", scorecardData);
+    const totalEl = document.getElementById('total-students-card');
+    const maleEl = document.getElementById('male-students-card');
+    const femaleEl = document.getElementById('female-students-card');
+
+    const startTotal = parseInt(totalEl?.textContent) || 0;
+    const startMale = parseInt(maleEl?.textContent) || 0;
+    const startFemale = parseInt(femaleEl?.textContent) || 0;
+
+    const endTotal = parseInt(scorecardData.total || 0);
+    const endMale = parseInt(scorecardData.male || 0);
+    const endFemale = parseInt(scorecardData.female || 0);
+
+    console.log(`Values for animation - Total: ${startTotal} -> ${endTotal}, Male: ${startMale} -> ${endMale}, Female: ${startFemale} -> ${endFemale}`);
+
+    const duration = 500;
+
+    animateValue(totalEl, startTotal, endTotal, duration);
+    animateValue(maleEl, startMale, endMale, duration);
+    animateValue(femaleEl, startFemale, endFemale, duration);
+  }
+
+  // === Sidebar View Switching Logic (Existing) ===
+  document.addEventListener('DOMContentLoaded', function () {
+    const sidebarLinks = document.querySelectorAll('.sidebar .nav-link[data-target]');
+    const contentSections = document.querySelectorAll('main > div[id$="-content"]');
+
+    // Initially hide dashboard content and show demographics content
+    contentSections.forEach(section => {
+      if (section.id === 'dashboard-overview-content') {
+        section.style.display = 'none';
+      } else if (section.id === 'demographics-content') {
+        section.style.display = 'block';
+      }
+    });
+
+    // Update the active sidebar link to match the initial content
+    sidebarLinks.forEach(link => {
+      if (link.getAttribute('data-target') === 'dashboard-overview-content') {
+        link.classList.remove('active');
+      } else if (link.getAttribute('data-target') === 'demographics-content') {
+        link.classList.add('active');
+      }
+    });
+
+    // Load demographics data for the initial view
+    loadDemographicsTable();
+
+    sidebarLinks.forEach(link => {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        const targetId = this.getAttribute('data-target');
+        console.log(`Sidebar link clicked: Target=${targetId}`);
+
+        sidebarLinks.forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+
+        contentSections.forEach(section => {
+          section.style.display = 'none';
+        });
+
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) {
+          console.log(`Attempting to show section: #${targetId}`);
+          targetSection.style.display = 'block';
+          if (targetId === 'demographics-content') {
+            loadDemographicsTable();
+          }
+        } else {
+          console.error(`Target section #${targetId} not found!`);
+        }
+      });
+    });
+
+    const mainTabs = document.querySelectorAll('#demographics-tabs .nav-link');
+    if (mainTabs.length > 0) {
+      mainTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+          console.log(`Main tab shown: ${event.target.id}`);
+          loadDemographicsTable();
+        });
+      });
+    } else {
+      console.error("Could not find main tab links (#demographics-tabs .nav-link) to attach listener.");
+    }
+
+    const attendanceSubTabs = document.querySelectorAll('#attendance-pills-tab .nav-link');
+    if (attendanceSubTabs.length > 0) {
+      attendanceSubTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+          console.log(`Attendance sub-tab shown: ${event.target.id}`);
+          loadDemographicsTable();
+        });
+      });
+    } else {
+      console.warn("Could not find attendance sub-tab links (#attendance-pills-tab .nav-link). May not be on page yet?");
+    }
+
+    const downloadBtn = document.getElementById('download-demographics-btn');
+    const downloadPivotBtn = document.getElementById('download-attendance-pivot-btn');
+    const academicYearFilter = document.getElementById('academicYearFilter');
+    const attendanceMonthFilter = document.getElementById('attendance-month-filter');
+    const cityFilter = document.getElementById('cityFilter');
+    const genderFilter = document.getElementById('genderFilter');
+
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', async () => {
+        const academicYear = academicYearFilter.value;
+        const city = cityFilter.value;
+        const gender = genderFilter.value;
+        const attendanceMonth = attendanceMonthFilter.value;
+
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Downloading...';
+
+        try {
+          const response = await fetch('/demographics/download_excel', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              academic_year: academicYear,
+              month: attendanceMonth,
+              city: city,
+              gender: gender
+            })
+          });
+
+          if (!response.ok) {
+            let errorMsg = `HTTP error! status: ${response.status}`;
+
+            // Clone the response before reading it
+            const responseClone = response.clone();
+
+            try {
+              const errorData = await response.json();
+              errorMsg = errorData.error || errorMsg;
+            } catch (e) {
+              try {
+                const textResponse = await responseClone.text();
+                console.error("Error response text:", textResponse.substring(0, 200));
+                errorMsg = textResponse.substring(0, 100) || errorMsg;
+              } catch (textError) {
+                console.error("Could not read response as text either:", textError);
+              }
+            }
+
+            if (response.status === 404) {
+              alert("No data available for the selected filters to download.");
+            } else {
+              alert(`Error downloading file: ${errorMsg}`);
+            }
+            throw new Error(errorMsg);
+          }
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `demographics_${academicYear}_${attendanceMonth}_${city}_${gender}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          console.log("Excel file download triggered.");
+
+        } catch (error) {
+          console.error('Download error:', error);
+          alert('An error occurred while trying to download the file.');
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.innerHTML = '<i class="fas fa-file-excel text-success"></i> <span class="d-none d-sm-inline">Download</span>';
+        }
+      });
+    } else {
+      console.error("Demographics Download button not found!");
+    }
+
+    if (downloadPivotBtn) {
+      downloadPivotBtn.addEventListener('click', async () => {
+        console.log("Download Attendance Pivot button clicked");
+
+        const mainAttendanceTabButtonActive = document.getElementById('btn-attendance')?.classList.contains('active');
+        const studentSubTabButtonActive = document.getElementById('pills-student-att-tab')?.classList.contains('active');
+
+        console.log(`Download Pivot Check: Main Tab Active = ${mainAttendanceTabButtonActive}, Student Sub-Tab Active = ${studentSubTabButtonActive}`);
+
+        if (!mainAttendanceTabButtonActive || !studentSubTabButtonActive) {
+          alert("Please ensure the Attendance -> Student tab is active to download the pivot table.");
+          return;
+        }
+
+        downloadPivotBtn.disabled = true;
+        downloadPivotBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Downloading...';
+
+        const academicYear = academicYearFilter.value;
+        const month = attendanceMonthFilter.value;
+        const city = cityFilter.value;
+        const gender = genderFilter.value;
+
+        try {
+          const response = await fetch('/demographics/download_attendance_pivot', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ academic_year: academicYear, month: month, city: city, gender: gender })
+          });
+
+          if (!response.ok) {
+            let errorMsg = `HTTP error! status: ${response.status}`;
+
+            // Clone the response before reading it
+            const responseClone = response.clone();
+
+            try {
+              const errData = await response.json();
+              errorMsg = errData.error || errorMsg;
+            } catch (e) {
+              try {
+                const textResponse = await responseClone.text();
+                console.error("Error response text:", textResponse.substring(0, 200));
+                errorMsg = textResponse.substring(0, 100) || errorMsg;
+              } catch (textError) {
+                console.error("Could not read response as text either:", textError);
+              }
+            }
+
+            if (response.status === 404) {
+              alert("No attendance data available for the selected filters to download.");
+            } else {
+              alert(`Error downloading pivot table: ${errorMsg}`);
+            }
+            throw new Error(errorMsg);
+          }
+
+          const blob = await response.blob();
+          const academicYearSafe = academicYear.replace('/', '-');
+          const monthSafe = month.replace(/[^a-zA-Z0-9_.-]/g, '_');
+          const filename = `attendance_pivot_${academicYearSafe}_${monthSafe}.xlsx`;
+
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none'; a.href = url; a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url); a.remove();
+          console.log("Attendance pivot file download triggered.");
+
+        } catch (error) {
+          console.error('Attendance Pivot Download error:', error);
+          alert('An error occurred while trying to download the pivot table.');
+        } finally {
+          downloadPivotBtn.disabled = false;
+          downloadPivotBtn.innerHTML = '<i class="fas fa-file-excel me-1"></i> Download';
+        }
+      });
+    } else {
+      console.warn("Attendance Pivot Download button not found! Ensure it exists in the HTML.");
+    }
+
+    const downloadParentBtn = document.getElementById('download-parent-attendance-btn');
+    if (downloadParentBtn) {
+        downloadParentBtn.addEventListener('click', async () => {
+            console.log("Download Parent Attendance button clicked");
+            const academicYear = document.getElementById('academicYearFilter').value;
+            const month = document.getElementById('attendance-month-filter').value;
+            const city = document.getElementById('cityFilter').value;
+            const gender = document.getElementById('genderFilter').value;
+
+            const downloadUrl = new URL("{{ url_for('demographics.download_parent_attendance_data') }}", window.location.origin);
+            downloadUrl.searchParams.append('academic_year', academicYear);
+            downloadUrl.searchParams.append('month', month);
+            downloadUrl.searchParams.append('city', city);
+            downloadUrl.searchParams.append('gender', gender);
+
+            console.log("Requesting download from:", downloadUrl.toString());
+
+            window.location.href = downloadUrl.toString();
+
+            downloadParentBtn.disabled = true;
+            downloadParentBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Downloading...';
+
+            setTimeout(() => {
+                downloadParentBtn.disabled = false;
+                downloadParentBtn.innerHTML = '<i class="fas fa-file-excel me-1"></i> Download';
+            }, 3000);
+        });
+    } else {
+        console.warn("Could not find Parent Attendance download button (#download-parent-attendance-btn).");
+    }
+
+    const downloadSWParentBtn = document.getElementById('download-swparent-attendance-btn');
+    if (downloadSWParentBtn) {
+        downloadSWParentBtn.addEventListener('click', async () => {
+            console.log("Download SW Parent Attendance button clicked");
+            const academicYear = document.getElementById('academicYearFilter').value;
+            const month = document.getElementById('attendance-month-filter').value;
+            const city = document.getElementById('cityFilter').value;
+            const gender = document.getElementById('genderFilter').value;
+
+            const downloadUrl = new URL("{{ url_for('demographics.download_sw_parent_attendance_data') }}", window.location.origin);
+            downloadUrl.searchParams.append('academic_year', academicYear);
+            downloadUrl.searchParams.append('month', month);
+            downloadUrl.searchParams.append('city', city);
+            downloadUrl.searchParams.append('gender', gender);
+
+            console.log("Requesting SW Parent attendance download from:", downloadUrl.toString());
+            window.location.href = downloadUrl.toString();
+
+            downloadSWParentBtn.disabled = true;
+            downloadSWParentBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Downloading...';
+
+            setTimeout(() => {
+                downloadSWParentBtn.disabled = false;
+                downloadSWParentBtn.innerHTML = '<i class="fas fa-file-excel me-1"></i> Download';
+            }, 3000);
+        });
+    } else {
+        console.warn("Could not find SW Parent Attendance download button (#download-swparent-attendance-btn).");
+    }
+
+    document.getElementById('academicYearFilter').addEventListener('change', loadDemographicsTable);
+    document.getElementById('attendance-month-filter').addEventListener('change', loadDemographicsTable);
+    document.getElementById('cityFilter').addEventListener('change', loadDemographicsTable);
+    document.getElementById('genderFilter').addEventListener('change', loadDemographicsTable);
+  });
+</script>
+{% endblock %}
+
+<!-- Additional JavaScript that was cut off -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    populateFilters();
+
+    console.log("Attaching tab switch listeners...");
+
+    const studentNumbersTab = document.getElementById('student-numbers-tab');
+    const attendanceTab = document.getElementById('attendance-tab');
+
+    if (studentNumbersTab) {
+        studentNumbersTab.addEventListener('shown.bs.tab', function (event) {
+            console.log('Student Numbers tab shown, calling loadDemographicsTable');
+            loadDemographicsTable();
+        });
+    } else {
+        console.warn("Element with ID 'student-numbers-tab' not found for listener.");
+    }
+
+    if (attendanceTab) {
+        attendanceTab.addEventListener('shown.bs.tab', function (event) {
+            console.log('Attendance tab shown, calling loadDemographicsTable');
+            loadDemographicsTable();
+        });
+    } else {
+        console.warn("Element with ID 'attendance-tab' not found for listener.");
+    }
+
+    const studentAttTab = document.getElementById('student-attendance-tab');
+    const parentAttTab = document.getElementById('parent-attendance-tab');
+    const swParentAttTab = document.getElementById('sw-parent-attendance-tab');
+
+    if (studentAttTab) {
+        studentAttTab.addEventListener('shown.bs.tab', function (event) {
+            console.log('Student Attendance sub-tab shown, calling loadDemographicsTable');
+            loadDemographicsTable();
+        });
+    } else {
+         console.warn("Element with ID 'student-attendance-tab' not found for listener.");
+    }
+    if (parentAttTab) {
+        parentAttTab.addEventListener('shown.bs.tab', function (event) {
+            console.log('Parent Attendance sub-tab shown, calling loadDemographicsTable');
+            loadDemographicsTable();
+        });
+    } else {
+        console.warn("Element with ID 'parent-attendance-tab' not found for listener.");
+    }
+    if (swParentAttTab) {
+        swParentAttTab.addEventListener('shown.bs.tab', function (event) {
+            console.log('SW Parent Attendance sub-tab shown, calling loadDemographicsTable');
+            loadDemographicsTable();
+        });
+    } else {
+        console.warn("Element with ID 'sw-parent-attendance-tab' not found for listener.");
+    }
+
+    console.log("Tab switch listeners attached.");
+
+    const schoolModalElement = document.getElementById('schoolMonthlyAttendanceModal');
+    const schoolModal = schoolModalElement ? new bootstrap.Modal(schoolModalElement) : null;
+    const modalSchoolNameEl = document.getElementById('modalSchoolName');
+    const modalChartCanvas = document.getElementById('schoolMonthlyAttendanceChart');
+    const modalErrorMsgEl = document.getElementById('modalErrorMsg');
+    const modalLoadingEl = document.getElementById('modalLoadingIndicator');
+    let schoolAttendanceChart = null;
+
+    const attendanceTableContainer = document.getElementById('attendance-pivot-table-container');
+
+    if (attendanceTableContainer && schoolModal) {
+        console.log("Attaching click listener to student attendance table container for modal.");
+        attendanceTableContainer.addEventListener('click', function(event) {
+            const targetElement = event.target;
+            if (targetElement.tagName === 'TH' && targetElement.classList.contains('row_heading') && targetElement.closest('tbody')) {
+                const schoolName = targetElement.textContent.trim();
+                const academicYear = document.getElementById('academicYearFilter')?.value || 'All';
+                const gender = document.getElementById('genderFilter')?.value || 'All';
+                console.log(`School name clicked: ${schoolName}, Filters - Year: ${academicYear}, Gender: ${gender}`);
+
+                if (modalSchoolNameEl) modalSchoolNameEl.textContent = schoolName;
+                if (modalErrorMsgEl) modalErrorMsgEl.style.display = 'none';
+                if (modalLoadingEl) modalLoadingEl.style.display = 'block';
+                if (modalChartCanvas) modalChartCanvas.style.display = 'none';
+
+                // Destroy previous chart instance if it exists
+                if (schoolAttendanceChart) {
+                    schoolAttendanceChart.destroy();
+                    schoolAttendanceChart = null; // Reset the variable
+                    console.log("Previous school chart destroyed.");
+                }
+
+                schoolModal.show();
+                fetchAndDisplaySchoolChart(schoolName, academicYear, gender);
+            }
+        });
+    } else {
+        if (!attendanceTableContainer) console.warn("Attendance table container not found for modal listener.");
+        if (!schoolModal) console.warn("School attendance modal JS object could not be initialized.");
+    }
+
+    async function fetchAndDisplaySchoolChart(schoolName, academicYear, gender) {
+        console.log(`Fetching monthly attendance for: ${schoolName}, Year: ${academicYear}, Gender: ${gender}`);
+        const url = new URL("{{ url_for('demographics.get_school_monthly_attendance') }}", window.location.origin);
+        url.searchParams.append('school_name', schoolName);
+        if (academicYear && academicYear !== 'All') {
+             url.searchParams.append('academic_year', academicYear);
+        }
+        if (gender && gender !== 'All') {
+            url.searchParams.append('gender', gender);
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error ${response.status}: ${errorText}`);
+            }
+            const data = await response.json();
+            console.log("Received school monthly data:", data);
+
+            if (data.labels && data.data && data.labels.length === data.data.length) {
+                renderSchoolChart(data.labels, data.data);
+                if (modalChartCanvas) modalChartCanvas.style.display = 'block';
+                if (modalErrorMsgEl) modalErrorMsgEl.style.display = 'none';
+            } else {
+                throw new Error("Invalid data format received from server.");
+            }
+
+        } catch (error) {
+            console.error("Error fetching or rendering school chart:", error);
+            if (modalErrorMsgEl) {
+                modalErrorMsgEl.textContent = `Failed to load chart data: ${error.message}`;
+                modalErrorMsgEl.style.display = 'block';
+            }
+            if (modalChartCanvas) modalChartCanvas.style.display = 'none';
+        } finally {
+             if (modalLoadingEl) modalLoadingEl.style.display = 'none';
+        }
+    }
+
+    function renderSchoolChart(labels, data) {
+        if (!modalChartCanvas) {
+            console.error("Modal chart canvas not found!");
+            return;
+        }
+        const ctx = modalChartCanvas.getContext('2d');
+
+        const backgroundColors = data.map(value => value >= 85 ? 'rgba(75, 192, 192, 0.6)' : value >= 70 ? 'rgba(255, 206, 86, 0.6)' : 'rgba(255, 99, 132, 0.6)');
+        const borderColors = data.map(value => value >= 85 ? 'rgba(75, 192, 192, 1)' : value >= 70 ? 'rgba(255, 206, 86, 1)' : 'rgba(255, 99, 132, 1)');
+
+        schoolAttendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Student Attendance %',
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Average Attendance %'
+                        }
+                    },
+                    x: {
+                         title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value, context) => {
+                            return typeof value === 'number' ? value.toFixed(1) + '%' : '';
+                        },
+                        color: '#555',
+                        font: {
+                            weight: 'bold'
+                        }
+                     }
+                 }
+             }
+        });
+        console.log("School chart rendered.");
+
+        // --- Trend Calculation and Display ---
+        const trendDescriptionEl = document.getElementById('modalTrendDescription');
+        if (trendDescriptionEl) {
+            // Calculate and display the trend based on the fetched data
+            const trendMessage = calculateLinearTrend(data);
+            trendDescriptionEl.textContent = trendMessage;
+            console.log("Trend calculated:", trendMessage);
+        } else {
+            console.warn("Trend description element (#modalTrendDescription) not found.");
+        }
+        // --- End Trend Calculation ---
+    }
+
+    // === Parent Attendance Modal Logic ===
+    const parentModalElement = document.getElementById('parentMonthlyAttendanceModal');
+    const parentModal = parentModalElement ? new bootstrap.Modal(parentModalElement) : null;
+    const modalParentSchoolNameEl = document.getElementById('modalParentSchoolName');
+    const parentModalChartCanvas = document.getElementById('parentMonthlyAttendanceChart');
+    const parentModalErrorMsgEl = document.getElementById('parentModalErrorMsg');
+    const parentModalLoadingEl = document.getElementById('parentModalLoadingIndicator');
+    const parentModalTrendDescriptionEl = document.getElementById('parentModalTrendDescription');
+    let parentAttendanceChart = null;
+
+    // Listen for clicks on the parent attendance table
+    const parentAttendanceTableContainer = document.getElementById('parent-attendance-table-container');
+
+    if (parentAttendanceTableContainer && parentModal) {
+        console.log("Attaching click listener to parent attendance table container for modal.");
+        parentAttendanceTableContainer.addEventListener('click', function(event) {
+            const targetElement = event.target;
+            // Check if the clicked element is a school name header cell (th.row_heading in tbody)
+            if (targetElement.tagName === 'TH' && targetElement.classList.contains('row_heading') && targetElement.closest('tbody')) {
+                const schoolName = targetElement.textContent.trim();
+                const academicYear = document.getElementById('academicYearFilter')?.value || 'All';
+                const gender = document.getElementById('genderFilter')?.value || 'All';
+                console.log(`Parent table: School name clicked: ${schoolName}, Filters - Year: ${academicYear}, Gender: ${gender}`);
+
+                if (modalParentSchoolNameEl) modalParentSchoolNameEl.textContent = schoolName;
+                if (parentModalErrorMsgEl) parentModalErrorMsgEl.style.display = 'none';
+                if (parentModalLoadingEl) parentModalLoadingEl.style.display = 'block';
+                if (parentModalChartCanvas) parentModalChartCanvas.style.display = 'none';
+
+                // Destroy previous chart instance if it exists
+                if (parentAttendanceChart) {
+                    parentAttendanceChart.destroy();
+                    parentAttendanceChart = null;
+                    console.log("Previous parent chart destroyed.");
+                }
+
+                parentModal.show();
+                fetchAndDisplayParentChart(schoolName, academicYear, gender);
+            }
+        });
+    } else {
+        if (!parentAttendanceTableContainer) console.warn("Parent attendance table container not found for modal listener.");
+        if (!parentModal) console.warn("Parent attendance modal JS object could not be initialized.");
+    }
+
+    async function fetchAndDisplayParentChart(schoolName, academicYear, gender) {
+        console.log(`Fetching monthly parent attendance for: ${schoolName}, Year: ${academicYear}, Gender: ${gender}`);
+        const url = new URL("{{ url_for('demographics.get_school_parent_monthly_attendance') }}", window.location.origin);
+        url.searchParams.append('school_name', schoolName);
+        if (academicYear && academicYear !== 'All') {
+             url.searchParams.append('academic_year', academicYear);
+        }
+        if (gender && gender !== 'All') {
+            url.searchParams.append('gender', gender);
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error ${response.status}: ${errorText}`);
+            }
+            const data = await response.json();
+            console.log("Received school parent monthly data:", data);
+
+            if (data.labels && data.data && data.labels.length === data.data.length) {
+                renderParentChart(data.labels, data.data);
+                if (parentModalChartCanvas) parentModalChartCanvas.style.display = 'block';
+                if (parentModalErrorMsgEl) parentModalErrorMsgEl.style.display = 'none';
+            } else {
+                throw new Error("Invalid data format received from server.");
+            }
+
+        } catch (error) {
+            console.error("Error fetching or rendering parent chart:", error);
+            if (parentModalErrorMsgEl) {
+                parentModalErrorMsgEl.textContent = `Failed to load chart data: ${error.message}`;
+                parentModalErrorMsgEl.style.display = 'block';
+            }
+            if (parentModalChartCanvas) parentModalChartCanvas.style.display = 'none';
+        } finally {
+             if (parentModalLoadingEl) parentModalLoadingEl.style.display = 'none';
+        }
+    }
+
+    function renderParentChart(labels, data) {
+        if (!parentModalChartCanvas) {
+            console.error("Parent modal chart canvas not found!");
+            return;
+        }
+        const ctx = parentModalChartCanvas.getContext('2d');
+
+        const backgroundColors = data.map(value => value >= 85 ? 'rgba(75, 192, 192, 0.6)' : value >= 70 ? 'rgba(255, 206, 86, 0.6)' : 'rgba(255, 99, 132, 0.6)');
+        const borderColors = data.map(value => value >= 85 ? 'rgba(75, 192, 192, 1)' : value >= 70 ? 'rgba(255, 206, 86, 1)' : 'rgba(255, 99, 132, 1)');
+
+        parentAttendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Parent Attendance %',
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Average Attendance %'
+                        }
+                    },
+                    x: {
+                         title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value, context) => {
+                            return typeof value === 'number' ? value.toFixed(1) + '%' : '';
+                        },
+                        color: '#555',
+                        font: {
+                            weight: 'bold'
+                        }
+                     }
+                 }
+             }
+        });
+        console.log("Parent chart rendered.");
+
+        // --- Trend Calculation and Display ---
+        if (parentModalTrendDescriptionEl) {
+            // Calculate and display the trend based on the fetched data
+            const trendMessage = calculateLinearTrend(data);
+            parentModalTrendDescriptionEl.textContent = trendMessage;
+            console.log("Parent trend calculated:", trendMessage);
+        } else {
+            console.warn("Parent trend description element (#parentModalTrendDescription) not found.");
+        }
+    }
+});
+
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const studentNumbersTab = document.getElementById('btn-student-numbers');
+    const attendanceTab = document.getElementById('btn-attendance');
+    const mainAcademicYearFilter = document.getElementById('academicYearFilter');
+    const mainMonthFilter = document.getElementById('attendance-month-filter');
+
+    function toggleMainAcademicYearFilter() {
+      if (!mainAcademicYearFilter) {
+        console.warn("Main Academic Year filter (academic_year_filter) not found.");
+        return;
+      }
+
+      const isStudentNumbersActive = studentNumbersTab && studentNumbersTab.classList.contains('active');
+      console.log(`toggleMainAcademicYearFilter called. Is Student Numbers Active? ${isStudentNumbersActive}`);
+
+      if (isStudentNumbersActive) {
+        mainAcademicYearFilter.disabled = true;
+        console.log("Main Academic Year Filter Disabled (Student Numbers active)");
+      } else {
+        mainAcademicYearFilter.disabled = false;
+        console.log("Main Academic Year Filter Enabled (Student Numbers inactive)");
+      }
+
+      if (mainMonthFilter) {
+        mainMonthFilter.disabled = isStudentNumbersActive;
+        console.log(`Month Filter ${isStudentNumbersActive ? 'Disabled' : 'Enabled'} (Student Numbers ${isStudentNumbersActive ? 'active' : 'inactive'})`);
+      }
+    }
+
+    const mainTabs = document.querySelectorAll('#demographics-tabs .nav-link');
+    if (mainTabs.length === 0) {
+      console.error("Could not find main tab links (#demographics-tabs .nav-link) to attach listener.");
+    } else {
+      console.log(`Attaching listener to ${mainTabs.length} main tabs.`);
+      mainTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+          console.log(`Tab shown: ${event.target.id}`);
+          toggleMainAcademicYearFilter();
+        });
+      });
+    }
+
+    toggleMainAcademicYearFilter();
+
+  });
+
+
+// === SW-Parent Monthly Modal Logic ===
+document.addEventListener('DOMContentLoaded', function() {
+    const swParentModalElement = document.getElementById('swParentMonthlyModal');
+    const swParentModal = swParentModalElement ? new bootstrap.Modal(swParentModalElement) : null;
+    const modalSwParentSchoolNameEl = document.getElementById('modalSwParentSchoolName');
+    const swParentModalChartCanvas = document.getElementById('swParentMonthlyChart');
+    const swParentModalErrorMsgEl = document.getElementById('swParentModalErrorMsg');
+    const swParentModalLoadingEl = document.getElementById('swParentModalLoadingIndicator');
+    const swParentModalTrendDescriptionEl = document.getElementById('swParentModalTrendDescription');
+    let swParentAttendanceChart = null;
+
+    // Listen for clicks on the SW-Parent attendance table
+    const swParentTableContainer = document.getElementById('sw-parent-attendance-table-container');
+
+    if (swParentTableContainer && swParentModal) {
+        console.log("Attaching click listener to SW-Parent attendance table container for modal.");
+        swParentTableContainer.addEventListener('click', function(event) {
+            const targetElement = event.target;
+            // Check if the clicked element is a school name header cell (th.row_heading in tbody)
+            if (targetElement.tagName === 'TH' && targetElement.classList.contains('row_heading') && targetElement.closest('tbody')) {
+                const schoolName = targetElement.textContent.trim();
+                const academicYear = document.getElementById('academicYearFilter')?.value || 'All';
+                const gender = document.getElementById('genderFilter')?.value || 'All';
+                console.log(`SW-Parent table: School name clicked: ${schoolName}, Filters - Year: ${academicYear}, Gender: ${gender}`);
+
+                if (modalSwParentSchoolNameEl) modalSwParentSchoolNameEl.textContent = schoolName;
+                if (swParentModalErrorMsgEl) swParentModalErrorMsgEl.style.display = 'none';
+                if (swParentModalLoadingEl) swParentModalLoadingEl.style.display = 'block';
+                if (swParentModalChartCanvas) swParentModalChartCanvas.style.display = 'none';
+
+                // Destroy previous chart instance if it exists
+                if (swParentAttendanceChart) {
+                    swParentAttendanceChart.destroy();
+                    swParentAttendanceChart = null;
+                    console.log("Previous SW-Parent chart destroyed.");
+                }
+
+                swParentModal.show();
+                fetchAndDisplaySwParentChart(schoolName, academicYear, gender);
+            }
+        });
+    } else {
+        if (!swParentTableContainer) console.warn("SW-Parent attendance table container not found for modal listener.");
+        if (!swParentModal) console.warn("SW-Parent attendance modal JS object could not be initialized.");
+    }
+
+    async function fetchAndDisplaySwParentChart(schoolName, academicYear, gender) {
+        console.log(`Fetching monthly SW-Parent attendance for: ${schoolName}, Year: ${academicYear}, Gender: ${gender}`);
+        const url = new URL("{{ url_for('demographics.get_school_sw_parent_monthly') }}", window.location.origin);
+        url.searchParams.append('school_name', schoolName);
+        if (academicYear && academicYear !== 'All') {
+            url.searchParams.append('academic_year', academicYear);
+        }
+        if (gender && gender !== 'All') {
+            url.searchParams.append('gender', gender);
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error ${response.status}: ${errorText}`);
+            }
+            const data = await response.json();
+            console.log("Received school SW-Parent monthly data:", data);
+
+            if (data.labels && data.data && data.labels.length === data.data.length) {
+                renderSwParentChart(data.labels, data.data);
+                if (swParentModalChartCanvas) swParentModalChartCanvas.style.display = 'block';
+                if (swParentModalErrorMsgEl) swParentModalErrorMsgEl.style.display = 'none';
+            } else {
+                throw new Error("Invalid data format received from server.");
+            }
+
+        } catch (error) {
+            console.error("Error fetching or rendering SW-Parent chart:", error);
+            if (swParentModalErrorMsgEl) {
+                swParentModalErrorMsgEl.textContent = `Failed to load chart data: ${error.message}`;
+                swParentModalErrorMsgEl.style.display = 'block';
+            }
+            if (swParentModalChartCanvas) swParentModalChartCanvas.style.display = 'none';
+        } finally {
+            if (swParentModalLoadingEl) swParentModalLoadingEl.style.display = 'none';
+        }
+    }
+
+    function renderSwParentChart(labels, data) {
+        if (!swParentModalChartCanvas) {
+            console.error("SW-Parent modal chart canvas not found!");
+            return;
+        }
+        const ctx = swParentModalChartCanvas.getContext('2d');
+
+        const backgroundColors = data.map(value => value >= 85 ? 'rgba(75, 192, 192, 0.6)' : value >= 70 ? 'rgba(255, 206, 86, 0.6)' : 'rgba(255, 99, 132, 0.6)');
+        const borderColors = data.map(value => value >= 85 ? 'rgba(75, 192, 192, 1)' : value >= 70 ? 'rgba(255, 206, 86, 1)' : 'rgba(255, 99, 132, 1)');
+
+        swParentAttendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average SW-Parent Attendance %',
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Average Attendance %'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y.toFixed(1) + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value, context) => {
+                            return typeof value === 'number' ? value.toFixed(1) + '%' : '';
+                        },
+                        color: '#555',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        });
+        console.log("SW-Parent chart rendered.");
+
+        // Calculate and display trend
+        if (swParentModalTrendDescriptionEl) {
+            const trendMessage = calculateLinearTrend(data);
+            swParentModalTrendDescriptionEl.textContent = trendMessage;
+            console.log("SW-Parent trend calculated:", trendMessage);
+        } else {
+            console.warn("SW-Parent trend description element (#swParentModalTrendDescription) not found.");
+        }
+    }
+});
+
+</script>
+
+<script>
+// Dashboard charts have been removed as requested
+// This script block is kept as a placeholder for future dashboard functionality
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard initialized with empty content');
+});
+</script>
+
+<script>
+// Student insights charts have been removed as requested
+// This script block is kept as a placeholder for future functionality
+</script>
+</body>
+</html>
