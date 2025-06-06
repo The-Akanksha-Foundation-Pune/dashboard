@@ -1,5 +1,124 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    /* Add a subtle glow and pointer to clickable cells */
+    [data-clickable="true"] {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    [data-clickable="true"]:hover {
+        background-color: #f0f8ff; /* A light blue glow */
+        box-shadow: 0 0 10px rgba(70, 130, 180, 0.5); /* Steelblue glow */
+        transform: scale(1.02); /* Slightly enlarge the cell */
+    }
+
+    /* Animation for the cell when clicked */
+    [data-clickable="true"]:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+    }
+
+    .school-link {
+        color: #0d6efd;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .school-link:hover {
+        color: #0a58ca;
+        text-decoration: underline;
+    }
+
+    /* Add a subtle indicator that the school name is clickable */
+    .school-link::after {
+        content: " 📊";
+        font-size: 0.8em;
+        opacity: 0.7;
+    }
+
+    .percentage-cell {
+        position: relative;
+        transition: background-color 0.2s;
+    }
+
+    .percentage-cell:hover {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+    }
+
+    .percentage-cell::after {
+        content: " 📈";
+        font-size: 0.8em;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .percentage-cell:hover::after {
+        opacity: 0.7;
+    }
+
+    /* Modern pill styles for Demographics tabs and Attendance pills (from Kaleidoscope) */
+    #demographics-tabs.nav-tabs .nav-link,
+    #attendance-pills-tab.nav-pills .nav-link {
+        border-radius: 2rem;
+        margin-right: 0.5rem;
+        color: #495057;
+        background: #f8f9fa;
+        transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+        font-weight: 500;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    #demographics-tabs.nav-tabs .nav-link.active,
+    #attendance-pills-tab.nav-pills .nav-link.active {
+        background: linear-gradient(90deg, #4f8cff 0%, #38c6ff 100%);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(79,140,255,0.15);
+        font-weight: 600;
+    }
+    #demographics-tabs.nav-tabs .nav-link:hover:not(.active),
+    #attendance-pills-tab.nav-pills .nav-link:hover:not(.active) {
+        background: #e9ecef;
+        color: #007bff;
+    }
+    #demographics-tabs.nav-tabs,
+    #attendance-pills-tab.nav-pills {
+        margin-bottom: 1.5rem;
+        padding: 0.5rem 0.5rem 0 0.5rem;
+        background: #f4f8fb;
+        border-radius: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* Animated hand icon for clickable pills */
+    .clickable-pill {
+        position: relative;
+        cursor: pointer;
+        transition: box-shadow 0.2s;
+    }
+    .clickable-pill .hand-anim {
+        display: inline-block;
+        font-size: 1.2em; /* Made it a bit bigger */
+        margin-left: 0.3em;
+        vertical-align: middle;
+        animation: pointAndWiggle 2.5s infinite ease-in-out;
+        transform-origin: bottom; /* To make it wiggle from the base */
+        opacity: 0.9;
+        transition: opacity 0.2s;
+    }
+    .clickable-pill:not(:hover) .hand-anim {
+        opacity: 0.6;
+    }
+    @keyframes pointAndWiggle {
+        0% { transform: translateY(0) rotate(0deg); }
+        20% { transform: translateY(-5px) rotate(-10deg); }
+        40% { transform: translateY(0) rotate(10deg); }
+        60% { transform: translateY(-2px) rotate(-5deg); }
+        80% { transform: translateY(0) rotate(5deg); }
+        100% { transform: translateY(0) rotate(0deg); }
+    }
+</style>
 <div class="container-fluid">
     <!-- Demographics Header -->
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
@@ -126,13 +245,19 @@
             <div class="pills-scroll-container">
                 <ul class="nav nav-pills mb-3 mt-3 mobile-pills-inline" id="attendance-pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="pills-student-att-tab" data-bs-toggle="pill" data-bs-target="#pills-student-att" type="button" role="tab" aria-controls="pills-student-att" aria-selected="true">Student</button>
+                        <button class="nav-link active clickable-pill" id="pills-student-att-tab" data-bs-toggle="pill" data-bs-target="#pills-student-att" type="button" role="tab" aria-controls="pills-student-att" aria-selected="true" title="Click to view Student Attendance">
+                            Student <span class="hand-anim">👆</span>
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pills-parent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-parent-att" type="button" role="tab" aria-controls="pills-parent-att" aria-selected="false">Parent</button>
+                        <button class="nav-link clickable-pill" id="pills-parent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-parent-att" type="button" role="tab" aria-controls="pills-parent-att" aria-selected="false" title="Click to view Parent Attendance">
+                            Parent <span class="hand-anim">👆</span>
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pills-swparent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-swparent-att" type="button" role="tab" aria-controls="pills-swparent-att" aria-selected="false">SW- Parent</button>
+                        <button class="nav-link clickable-pill" id="pills-swparent-att-tab" data-bs-toggle="pill" data-bs-target="#pills-swparent-att" type="button" role="tab" aria-controls="pills-swparent-att" aria-selected="false" title="Click to view SW-Parent Attendance">
+                            SW- Parent <span class="hand-anim">👆</span>
+                        </button>
                     </li>
                 </ul>
             </div>
@@ -319,47 +444,6 @@
         </div>
     </div>
 </div>
-
-<!-- Custom CSS for Demographics Page -->
-<style>
-    .school-link {
-        color: #0d6efd;
-        text-decoration: none;
-        transition: color 0.2s;
-    }
-
-    .school-link:hover {
-        color: #0a58ca;
-        text-decoration: underline;
-    }
-
-    /* Add a subtle indicator that the school name is clickable */
-    .school-link::after {
-        content: " 📊";
-        font-size: 0.8em;
-        opacity: 0.7;
-    }
-
-    .percentage-cell {
-        position: relative;
-        transition: background-color 0.2s;
-    }
-
-    .percentage-cell:hover {
-        background-color: rgba(13, 110, 253, 0.1) !important;
-    }
-
-    .percentage-cell::after {
-        content: " 📈";
-        font-size: 0.8em;
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-
-    .percentage-cell:hover::after {
-        opacity: 0.7;
-    }
-</style>
 
 <!-- JavaScript for Demographics Page -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

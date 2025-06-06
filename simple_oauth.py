@@ -10,7 +10,9 @@ from urllib.parse import urlencode
 # Load environment variables
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET')
-REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI')
+
+# The redirect URI is now dynamically generated in get_google_auth_url
+# and get_google_token to ensure it matches the current server scheme (HTTP/HTTPS)
 
 # Google OAuth endpoints
 AUTH_URI = 'https://accounts.google.com/o/oauth2/auth'
@@ -19,9 +21,12 @@ USER_INFO_URI = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
 def get_google_auth_url():
     """Generate the Google OAuth authorization URL."""
+    # Use url_for to dynamically generate the redirect URI
+    redirect_uri = url_for('authorized', _external=True)
+    
     params = {
         'client_id': GOOGLE_CLIENT_ID,
-        'redirect_uri': REDIRECT_URI,
+        'redirect_uri': redirect_uri,
         'scope': 'openid email profile',
         'response_type': 'code',
         'access_type': 'offline',
@@ -31,11 +36,14 @@ def get_google_auth_url():
 
 def get_google_token(code):
     """Exchange authorization code for access token."""
+    # Use url_for to dynamically generate the redirect URI
+    redirect_uri = url_for('authorized', _external=True)
+
     data = {
         'client_id': GOOGLE_CLIENT_ID,
         'client_secret': GOOGLE_CLIENT_SECRET,
         'code': code,
-        'redirect_uri': REDIRECT_URI,
+        'redirect_uri': redirect_uri,
         'grant_type': 'authorization_code'
     }
     response = requests.post(TOKEN_URI, data=data)

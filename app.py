@@ -278,7 +278,6 @@ if __name__ == "__main__":
         print(f"Warning: Could not initialize database: {e}")
         print("Running without database connection. Some features may not work.")
 
-    # Run with SSL for local HTTPS development
-    # Note: This uses Flask's built-in SSL support which is not suitable for production
-    # For production, use a proper WSGI server with SSL termination
-    app.run(debug=True, port=5000, ssl_context='adhoc')
+    # Run without SSL for local development
+    # Note: For production, use a proper WSGI server with SSL termination
+    app.run(debug=True, port=5000)

@@ -1,0 +1,1380 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Loading Spinner Overlay -->
+<div id="loading-overlay" style="display:none;position:fixed;z-index:2000;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);align-items:center;justify-content:center;">
+  <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status">
+    <span class="visually-hidden">Loading...</span>
+    </div>
+        </div>
+<div class="container mt-4">
+    <h1 class="mb-4">Kaleidoscope Dashboard</h1>
+    <style>
+    /* Responsive tweaks for mobile/tablet */
+    @media (max-width: 767.98px) {
+      .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .nav-tabs .nav-link {
+        white-space: nowrap;
+        font-size: 0.95rem;
+        padding: 0.5rem 0.75rem;
+      }
+      .form-label {
+        font-size: 0.95rem;
+      }
+      .table {
+        font-size: 0.95rem;
+      }
+      .container, .container-fluid {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+    }
+    @media (max-width: 575.98px) {
+      .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.5rem;
+      }
+      .table {
+        font-size: 0.9rem;
+      }
+    }
+    #sorted-list-table table th:first-child,
+    #sorted-list-table table td:first-child {
+      min-width: 100px;
+      max-width: 180px;
+      width: 1%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Modern pill styles for Kaleidoscope tabs */
+    #kaleidoscopeTab.nav-pills .nav-link {
+      border-radius: 2rem;
+      margin-right: 0.5rem;
+      color: #495057;
+      background: #f8f9fa;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    #kaleidoscopeTab.nav-pills .nav-link.active {
+      background: linear-gradient(90deg, #4f8cff 0%, #38c6ff 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(79,140,255,0.15);
+      font-weight: 600;
+    }
+    #kaleidoscopeTab.nav-pills .nav-link:hover:not(.active) {
+      background: #e9ecef;
+      color: #007bff;
+    }
+    #kaleidoscopeTab.nav-pills {
+      margin-bottom: 1.5rem;
+      padding: 0.5rem 0.5rem 0 0.5rem;
+      background: #f4f8fb;
+      border-radius: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    /* --- Attendance Table Academic Year Grouping --- */
+    .attendance-year-header {
+      background: #e3f0ff;
+      font-weight: 600;
+      border-top: 2px solid #b6d4fe;
+      border-bottom: 2px solid #b6d4fe;
+    }
+    .attendance-year-last {
+      border-right: 3px solid #4f8cff !important;
+    }
+    .attendance-year-cell {
+      background: #f7fbff;
+    }
+    /* Make the skills modal larger and animate its appearance */
+    #skillsModal .modal-dialog {
+      max-width: 98vw;
+    }
+    #skillsModal .modal-content {
+      min-height: 70vh;
+    }
+    .skill-modal-animate .modal-dialog {
+      animation: skillModalPopIn 0.45s cubic-bezier(.23,1.12,.62,1.01);
+    }
+    @keyframes skillModalPopIn {
+      0% { opacity: 0; transform: scale(0.85) translateY(40px); }
+      60% { opacity: 1; transform: scale(1.03) translateY(-8px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    #skills-bar-chart-container, #skills-bar-chart {
+      width: 100% !important;
+      min-width: 0;
+      max-width: 100vw;
+    }
+    /* --- MOBILE FRIENDLY SKILLS MODAL --- */
+    @media (max-width: 575.98px) {
+      #skillsModal .modal-dialog {
+        max-width: 100vw;
+        margin: 0;
+        height: 100vh;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+      }
+      #skillsModal .modal-content {
+        border-radius: 0;
+        min-height: 100vh;
+        height: 100vh;
+        padding: 0;
+      }
+      #skillsModal .modal-header, #skillsModal .modal-body {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+      #skills-bar-chart-container {
+        width: 100vw !important;
+        overflow-x: auto;
+        padding: 0;
+      }
+      #skills-bar-chart {
+        min-width: 400px;
+        width: 100vw !important;
+        height: 320px !important;
+        max-height: 45vh;
+      }
+      #skillsModal .modal-title {
+        font-size: 1.1rem;
+      }
+    }
+    .modal-blur-bg { filter: blur(5px) brightness(0.95); transition: filter 0.2s; }
+    </style>
+    <!-- Filters -->
+    <div id="kaleidoscope-filters-wrapper">
+    <form class="row g-3 mb-4" id="kaleidoscope-filters">
+        <div class="col-12 col-md-2">
+            <label for="assessmentType" class="form-label">Assessment Type</label>
+            <select id="assessmentType" name="assessmentType" class="form-select">
+                {% for t in assessment_types %}
+                    <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+      </div>
+        <div class="col-12 col-md-2">
+            <label for="academicYear" class="form-label">Academic Year</label>
+            <select id="academicYear" name="academicYear" class="form-select">
+                {% for y in academic_years %}
+                    <option value="{{ y }}">{{ y }}</option>
+                {% endfor %}
+            </select>
+    </div>
+        <div class="col-12 col-md-2">
+            <label for="subject" class="form-label">Subject</label>
+            <select id="subject" name="subject" class="form-select">
+                <option value="">All</option>
+                {% for s in subjects %}
+                    <option value="{{ s }}"{% if s == 'English' %} selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+  </div>
+        <div class="col-12 col-md-2">
+            <label for="school" class="form-label">School</label>
+            <select id="school" name="school" class="form-select">
+                <option value="">All</option>
+                {% for school in schools %}
+                    <option value="{{ school }}">{{ school }}</option>
+                {% endfor %}
+            </select>
+</div>
+        <div class="col-12 col-md-2">
+            <label for="grade" class="form-label">Grade</label>
+            <select id="grade" name="grade" class="form-select">
+                {% for g in grades %}
+                    <option value="{{ g }}">{{ g }}</option>
+                {% endfor %}
+            </select>
+  </div>
+        <div class="col-12 col-md-2">
+            <label for="division" class="form-label">Division</label>
+            <select id="division" name="division" class="form-select">
+                {% for d in divisions %}
+                    <option value="{{ d }}">{{ d }}</option>
+                {% endfor %}
+            </select>
+      </div>
+    </form>
+    </div>
+    <!-- Tabs -->
+    <ul class="nav nav-pills" id="kaleidoscopeTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="competency-tab" data-bs-toggle="tab" data-bs-target="#competency" type="button" role="tab">Competency</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="bucket-tab" data-bs-toggle="tab" data-bs-target="#bucket" type="button" role="tab">Bucket Analysis</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="average-tab" data-bs-toggle="tab" data-bs-target="#average" type="button" role="tab">Average</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sorted-tab" data-bs-toggle="tab" data-bs-target="#sorted" type="button" role="tab">Sorted List</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="student-table-tab" data-bs-toggle="tab" data-bs-target="#student-table" type="button" role="tab">Student Table</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">Summary</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="portfolio-tab" data-bs-toggle="tab" data-bs-target="#portfolio" type="button" role="tab">Portfolio</button>
+        </li>
+    </ul>
+    <div class="tab-content" id="kaleidoscopeTabContent">
+        <div class="tab-pane fade show active" id="competency" role="tabpanel">
+            <div class="table-responsive"><div id="competency-chart" style="height:400px; width:100%"></div></div>
+            <div id="competency-placeholder" class="text-muted mt-3">(Competency chart will appear here based on selected filters.)</div>
+            <div id="competency-trend-description" class="alert alert-info mt-3" style="display:none;"></div>
+        </div>
+        <!-- Modal for Skills Bar Chart -->
+        <div class="modal fade skill-modal-animate" id="skillsModal" tabindex="-1" aria-labelledby="skillsModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="skillsModalLabel">Skills in Competency</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div id="skills-bar-chart-container" style="width:100%;">
+                  <div id="skills-bar-chart" style="width:100%;height:600px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+    </div>
+        <div class="tab-pane fade" id="bucket" role="tabpanel">
+            <div class="table-responsive"><div id="bucket-chart" style="height:400px; width:100%"></div></div>
+            <div id="bucket-placeholder" class="text-muted mt-3">(Bucket analysis will appear here based on selected filters.)</div>
+        </div>
+        <div class="tab-pane fade" id="average" role="tabpanel">
+            <div class="table-responsive" id="average-table"></div>
+            <div id="average-placeholder" class="text-muted mt-3">(Average table will appear here based on selected filters.)</div>
+        </div>
+        <div class="tab-pane fade" id="sorted" role="tabpanel">
+            <div class="d-flex justify-content-end mb-2">
+                <div class="btn-group" role="group" aria-label="Sort Mode">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="sort-by-average" data-sort="average">Sort by Average</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="sort-by-name" data-sort="name">Sort by Name (A-Z)</button>
+        </div>
+        </div>
+            <div class="table-responsive" id="sorted-list-table"></div>
+            <div id="sorted-placeholder" class="text-muted mt-3">(Sorted list will appear here.)</div>
+        </div>
+        <div class="tab-pane fade" id="student-table" role="tabpanel">
+            <div class="table-responsive" id="student-table-content"></div>
+            <div id="student-table-placeholder" class="text-muted mt-3">(Student table will appear here.)</div>
+        </div>
+        <div class="tab-pane fade" id="summary" role="tabpanel">
+            <div class="table-responsive" id="summary-content"></div>
+            <div id="summary-placeholder" class="text-muted mt-3">(Summary will appear here.)</div>
+      </div>
+        <div class="tab-pane fade" id="portfolio" role="tabpanel">
+            <div class="mb-3 mt-3">
+                <label for="portfolio-student-search" class="form-label">Search Student (Name or ID)</label>
+                <input type="text" class="form-control" id="portfolio-student-search" placeholder="Type student name or ID...">
+    </div>
+            <div id="portfolio-content">
+                <div class="text-muted">Select a student to view their portfolio.</div>
+  </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script>
+// --- Competency Tab ---
+function getFilterParams() {
+    return {
+        assessment_type: document.getElementById('assessmentType').value,
+        academic_year: document.getElementById('academicYear').value,
+        subject: document.getElementById('subject').value,
+        school: document.getElementById('school').value,
+        grade: document.getElementById('grade').value === 'All' ? '' : document.getElementById('grade').value,
+        division: document.getElementById('division').value
+    };
+}
+
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function getBucketColor(avg, isOverall = false) {
+    if (isOverall) return 'rgba(255, 193, 7, 0.9)'; // Yellow for Overall
+    if (avg > 60) return '#28a745'; // Green
+    if (avg >= 35) return '#2596be'; // Blue
+    return '#dc3545'; // Red
+}
+
+function fetchCompetencyDataAndRender() {
+    showLoadingOverlay();
+    const params = new URLSearchParams(getFilterParams());
+    fetch(`/dashboard/kaleidoscope/data?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            // Group by competency_level_name and calculate average
+            const compMap = {};
+            let overallObtained = 0, overallMax = 0;
+            data.forEach(row => {
+                if (!row.competency_level_name) return;
+                if (!compMap[row.competency_level_name]) {
+                    compMap[row.competency_level_name] = { obtained: 0, max: 0 };
+                }
+                compMap[row.competency_level_name].obtained += row.obtained_marks || 0;
+                compMap[row.competency_level_name].max += row.max_marks || 0;
+                overallObtained += row.obtained_marks || 0;
+                overallMax += row.max_marks || 0;
+            });
+            let competencies = Object.keys(compMap).sort();
+            const averages = competencies.map(c => compMap[c].max > 0 ? (compMap[c].obtained / compMap[c].max) * 100 : 0);
+            // Add overall
+            competencies.push('Overall');
+            averages.push(overallMax > 0 ? (overallObtained / overallMax) * 100 : 0);
+            // Use bucket colors
+            const barColors = averages.map((avg, i) => getBucketColor(avg, competencies[i] === 'Overall'));
+            // Render chart with value labels
+            const chartData = [{
+                x: competencies,
+                y: averages,
+                type: 'bar',
+                marker: {color: barColors},
+                text: averages.map(a => a.toFixed(1) + '%'),
+                textposition: 'auto',
+                hovertemplate: '%{x}<br>Average: %{y:.2f}%<extra></extra>'
+            }];
+            const layout = {
+                title: 'Average Score by Competency',
+                yaxis: {title: 'Average (%)', range: [0, 100]},
+                xaxis: {title: 'Competency'}
+            };
+            // Animation: start with zero-height bars
+            const zeroData = [{
+                ...chartData[0],
+                y: chartData[0].y.map(() => 0),
+                text: chartData[0].y.map(() => '0.0%')
+            }];
+            Plotly.newPlot('competency-chart', zeroData, layout).then(() => {
+                Plotly.animate('competency-chart', {
+                    data: chartData
+                }, {
+                    transition: {duration: 900, easing: 'cubic-in-out'},
+                    frame: {duration: 900, redraw: false}
+                });
+            });
+            // Use only core competencies for trend description
+            const coreCompetencies = competencies.slice(0, -1);
+            const coreAverages = averages.slice(0, -1);
+            showCompetencyTrendDescription(coreAverages, coreCompetencies);
+            document.getElementById('competency-placeholder').style.display = competencies.length ? 'none' : 'block';
+            hideLoadingOverlay();
+            // Add click handler for all bars (including 'Overall')
+            document.getElementById('competency-chart').on('plotly_click', function(eventData) {
+                const point = eventData.points[0];
+                const competency = point.x;
+                // If 'Overall', pass special flag
+                if (competency === 'Overall') {
+                    fetchAndShowSkillsChart(null, true);
+                } else {
+                    fetchAndShowSkillsChart(competency, false);
+                }
+            });
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+// --- Bucket Analysis Tab ---
+function fetchBucketDataAndRender() {
+    showLoadingOverlay();
+    const params = new URLSearchParams(getFilterParams());
+    fetch(`/dashboard/kaleidoscope/bucket_data?${params.toString()}`)
+        .then(response => response.json())
+        .then(buckets => {
+            const competencies = buckets.competencies;
+            const traces = [
+                {
+                    x: competencies,
+                    y: buckets.Red,
+                    name: 'Red (<35%)',
+                    type: 'bar',
+                    marker: {color: '#dc3545'},
+                    text: buckets.Red.map(String),
+                    textposition: 'auto',
+                    hovertemplate: '%{x}<br>Red: %{y}<extra></extra>'
+                },
+                {
+                    x: competencies,
+                    y: buckets.Blue,
+                    name: 'Blue (35-60%)',
+                    type: 'bar',
+                    marker: {color: '#2596be'},
+                    text: buckets.Blue.map(String),
+                    textposition: 'auto',
+                    hovertemplate: '%{x}<br>Blue: %{y}<extra></extra>'
+                },
+                {
+                    x: competencies,
+                    y: buckets.Green,
+                    name: 'Green (>60%)',
+                    type: 'bar',
+                    marker: {color: '#28a745'},
+                    text: buckets.Green.map(String),
+                    textposition: 'auto',
+                    hovertemplate: '%{x}<br>Green: %{y}<extra></extra>'
+                }
+            ];
+            const layout = {
+                title: 'Student Distribution by Bucket (per Competency)',
+                yaxis: {title: 'Number of Students'},
+                xaxis: {title: 'Competency'},
+                barmode: 'stack',
+                legend: {orientation: 'h', y: -0.2}
+            };
+            Plotly.newPlot('bucket-chart', traces, layout);
+            document.getElementById('bucket-placeholder').style.display = (competencies && competencies.length) ? 'none' : 'block';
+            hideLoadingOverlay();
+            // Add click handler for bucket bars
+            document.getElementById('bucket-chart').on('plotly_click', function(eventData) {
+                const point = eventData.points[0];
+                const competency = point.x;
+                const bucket = point.data.name.split(' ')[0]; // 'Red', 'Blue', 'Green'
+                fetchAllBucketsForModal(competency, bucket);
+            });
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+// Modal for showing student names bucketwise (all buckets as columns)
+function showBucketStudentsModal(competency, selectedBucket, allBuckets) {
+    let modal = document.getElementById('bucketStudentsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'bucketStudentsModal';
+        modal.tabIndex = -1;
+        modal.setAttribute('aria-labelledby', 'bucketStudentsModalLabel');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.innerHTML = `
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bucketStudentsModalLabel">Students by Bucket (<span id="bucket-modal-competency"></span>)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row text-center" id="bucket-modal-buckets-row"></div>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    }
+    document.getElementById('bucket-modal-competency').textContent = competency;
+    const row = document.getElementById('bucket-modal-buckets-row');
+    row.innerHTML = '';
+    const buckets = [
+        {name: 'Red', color: 'danger'},
+        {name: 'Blue', color: 'info'},
+        {name: 'Green', color: 'success'}
+    ];
+    buckets.forEach(b => {
+        const col = document.createElement('div');
+        col.className = 'col-12 col-md-4 mb-3';
+        col.innerHTML = `
+            <div class="card border-${b.color} ${selectedBucket === b.name ? 'border-3' : ''}">
+                <div class="card-header bg-${b.color} text-white fw-bold bucket-header-clickable" style="cursor:pointer" data-bucket="${b.name}" data-competency="${competency}">${b.name} <span class="badge bg-light text-${b.color} ms-2">${allBuckets[b.name].length}</span></div>
+                <ul class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    ${allBuckets[b.name].length === 0 ? `<li class='list-group-item text-muted'>No students</li>` : allBuckets[b.name].map(name => `<li class='list-group-item bucket-student-name' style='cursor:pointer' data-student-name="${encodeURIComponent(name)}">${name}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+        row.appendChild(col);
+    });
+    // Add click handler for bucket headers
+    row.querySelectorAll('.bucket-header-clickable').forEach(el => {
+        el.addEventListener('click', function(e) {
+            const bucket = this.getAttribute('data-bucket');
+            const competency = this.getAttribute('data-competency');
+            fetchAndShowBucketStudentsAverages(competency, bucket);
+        });
+    });
+    // Add click handler for student names
+    row.querySelectorAll('.bucket-student-name').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent triggering the bucket header click
+            const studentName = decodeURIComponent(this.getAttribute('data-student-name'));
+            fetchAndShowStudentCompetencyAverages(studentName);
+        });
+    });
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+// Modal for showing all students in a bucket with their averages
+function showBucketStudentsAveragesModal(competency, bucket, studentsAverages, compNames) {
+    let modal = document.getElementById('bucketStudentsAveragesModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'bucketStudentsAveragesModal';
+        modal.tabIndex = -1;
+        modal.setAttribute('aria-labelledby', 'bucketStudentsAveragesModalLabel');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.innerHTML = `
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bucketStudentsAveragesModalLabel">${bucket} Bucket - ${competency} (All Students)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="bucket-students-averages-table"></div>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    }
+    // Build table
+    let html = '<div class="table-responsive"><table class="table table-bordered align-middle text-center"><thead><tr><th>Student</th>';
+    compNames.forEach(comp => { html += `<th>${comp}</th>`; });
+    html += '<th>Overall</th></tr></thead><tbody>';
+    studentsAverages.forEach(row => {
+        html += `<tr><td class='fw-bold'>${row.student_name}</td>`;
+        compNames.forEach(comp => {
+            const avg = row.averages[comp];
+            let bucketClass = '';
+            if (avg === null || avg === undefined) bucketClass = '';
+            else if (avg > 60) bucketClass = 'bg-success text-white';
+            else if (avg >= 35) bucketClass = 'bg-info text-dark';
+            else bucketClass = 'bg-danger text-white';
+            html += `<td class='${bucketClass}'>${avg !== null && avg !== undefined ? avg.toFixed(2) : '-'}</td>`;
+        });
+        // Overall cell
+        let overallClass = '';
+        if (row.overall === null || row.overall === undefined) overallClass = '';
+        else if (row.overall > 60) overallClass = 'bg-success text-white';
+        else if (row.overall >= 35) overallClass = 'bg-info text-dark';
+        else overallClass = 'bg-danger text-white';
+        html += `<td class='${overallClass} fw-bold'>${row.overall !== null && row.overall !== undefined ? row.overall.toFixed(2) : '-'}</td>`;
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('bucket-students-averages-table').innerHTML = html;
+    // Blur the background modal
+    const bgModal = document.getElementById('bucketStudentsModal');
+    if (bgModal) bgModal.querySelector('.modal-content').classList.add('modal-blur-bg');
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+    modal.addEventListener('hidden.bs.modal', function() {
+        if (bgModal) bgModal.querySelector('.modal-content').classList.remove('modal-blur-bg');
+    }, {once:true});
+}
+// Fetch and show all students' averages for a bucket and competency
+function fetchAndShowBucketStudentsAverages(competency, bucket) {
+    showLoadingOverlay();
+    const params = getFilterParams();
+    params.competency = competency;
+    params.bucket = bucket;
+    fetch(`/dashboard/kaleidoscope/bucket_students_averages?${new URLSearchParams(params).toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoadingOverlay();
+            showBucketStudentsAveragesModal(competency, bucket, data.students, data.competencies);
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+// Modal for showing a student's competency averages
+function showStudentCompetencyAveragesModal(studentName, averages, overall) {
+    let modal = document.getElementById('studentCompetencyAveragesModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'studentCompetencyAveragesModal';
+        modal.tabIndex = -1;
+        modal.setAttribute('aria-labelledby', 'studentCompetencyAveragesModalLabel');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.innerHTML = `
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="studentCompetencyAveragesModalLabel">Competency Averages for <span id="student-competency-modal-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="student-competency-averages-table"></div>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    }
+    document.getElementById('student-competency-modal-name').textContent = studentName;
+    // Build row table with color coding
+    let html = '<div class="table-responsive"><table class="table table-bordered align-middle text-center"><thead><tr>';
+    const compNames = Object.keys(averages);
+    compNames.forEach(comp => { html += `<th>${comp}</th>`; });
+    html += '<th>Overall</th></tr></thead><tbody><tr>';
+    compNames.forEach(comp => {
+        const avg = averages[comp];
+        let bucketClass = '';
+        if (avg === null || avg === undefined) bucketClass = '';
+        else if (avg > 60) bucketClass = 'bg-success text-white';
+        else if (avg >= 35) bucketClass = 'bg-info text-dark';
+        else bucketClass = 'bg-danger text-white';
+        html += `<td class='${bucketClass}'>${avg !== null && avg !== undefined ? avg.toFixed(2) : '-'}</td>`;
+    });
+    // Overall cell
+    let overallClass = '';
+    if (overall === null || overall === undefined) overallClass = '';
+    else if (overall > 60) overallClass = 'bg-success text-white';
+    else if (overall >= 35) overallClass = 'bg-info text-dark';
+    else overallClass = 'bg-danger text-white';
+    html += `<td class='${overallClass} fw-bold'>${overall !== null && overall !== undefined ? overall.toFixed(2) : '-'}</td>`;
+    html += '</tr></tbody></table></div>';
+    document.getElementById('student-competency-averages-table').innerHTML = html;
+    // Blur the background modal
+    const bgModal = document.getElementById('bucketStudentsModal');
+    if (bgModal) bgModal.querySelector('.modal-content').classList.add('modal-blur-bg');
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+    modal.addEventListener('hidden.bs.modal', function() {
+        if (bgModal) bgModal.querySelector('.modal-content').classList.remove('modal-blur-bg');
+    }, {once:true});
+}
+// Fetch and show a student's competency averages for the current filters
+function fetchAndShowStudentCompetencyAverages(studentName) {
+    showLoadingOverlay();
+    const params = getFilterParams();
+    params.student_name = studentName;
+    fetch(`/dashboard/kaleidoscope/student_competency_averages?${new URLSearchParams(params).toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoadingOverlay();
+            showStudentCompetencyAveragesModal(studentName, data.averages, data.overall);
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+// Update bucket chart click handler to fetch all buckets for the selected competency
+function fetchAllBucketsForModal(competency, selectedBucket) {
+    showLoadingOverlay();
+    const params = getFilterParams();
+    params.competency = competency;
+    const bucketNames = ['Red', 'Blue', 'Green'];
+    const fetches = bucketNames.map(bucket => {
+        const p = {...params, bucket};
+        return fetch(`/dashboard/kaleidoscope/bucket_students?${new URLSearchParams(p).toString()}`)
+            .then(r => r.json())
+            .then(data => ({bucket, students: data.students}));
+    });
+    Promise.all(fetches).then(results => {
+        hideLoadingOverlay();
+        const allBuckets = {};
+        results.forEach(r => { allBuckets[r.bucket] = r.students; });
+        showBucketStudentsModal(competency, selectedBucket, allBuckets);
+    }).catch(() => { hideLoadingOverlay(); });
+}
+// --- Average Tab ---
+function fetchAverageDataAndRender() {
+    showLoadingOverlay();
+    const params = new URLSearchParams(getFilterParams());
+    fetch(`/dashboard/kaleidoscope/average_table?${params.toString()}`)
+        .then(response => response.json())
+        .then(result => {
+            const grades = result.grades;
+            let subjects = result.subjects;
+            const data = result.data;
+            // Exclude GRADE 9 and GRADE 10 (case-insensitive)
+            let filteredGrades = grades.filter(g => g.toUpperCase() !== 'GRADE 9' && g.toUpperCase() !== 'GRADE 10');
+            // Place JR.KG and SR.KG (case-insensitive) at the top, then the rest
+            const orderedGrades = [];
+            const jrkg = filteredGrades.find(g => g.toUpperCase() === 'JR.KG');
+            const srkg = filteredGrades.find(g => g.toUpperCase() === 'SR.KG');
+            if (jrkg) orderedGrades.push(jrkg);
+            if (srkg) orderedGrades.push(srkg);
+            filteredGrades.forEach(g => {
+                if (g.toUpperCase() !== 'JR.KG' && g.toUpperCase() !== 'SR.KG') orderedGrades.push(g);
+            });
+            if (!orderedGrades.length || !subjects.length) {
+                document.getElementById('average-table').innerHTML = '<div class=\"alert alert-warning\">No data found for the selected filters.</div>';
+                document.getElementById('average-placeholder').style.display = 'none';
+                hideLoadingOverlay();
+                return;
+            }
+            // Only keep subjects and add 'Overall' at the end if not already present
+            let subjectsWithOverall = [...subjects];
+            if (!subjectsWithOverall.includes('Overall')) {
+                subjectsWithOverall.push('Overall');
+            }
+            // Build table header
+            let table = '<table class="table table-bordered align-middle"><thead><tr><th>Grade</th>';
+            subjectsWithOverall.forEach(subj => { table += `<th>${subj}</th>`; });
+            table += '</tr></thead><tbody>';
+            // Build table rows
+            orderedGrades.forEach(grade => {
+                table += `<tr><td><strong>${grade}</strong></td>`;
+                subjectsWithOverall.forEach(subj => {
+                    let avg;
+                    if (subj === 'Overall') {
+                        avg = data[grade]['Overall'];
+  } else {
+                        avg = data[grade][subj];
+                    }
+                    let cell = '';
+                    let bucketClass = '';
+                    if (avg !== null && avg !== undefined) {
+                        if (avg > 60) bucketClass = 'bg-success text-white';
+                        else if (avg >= 35) bucketClass = 'bg-info text-dark';
+                        else bucketClass = 'bg-danger text-white';
+                        cell = `<td class=\"${bucketClass}\">${avg.toFixed(2)}%</td>`;
+  } else {
+                        cell = '<td></td>';
+                    }
+                    table += cell;
+                });
+                table += '</tr>';
+            });
+            table += '</tbody></table>';
+            document.getElementById('average-table').innerHTML = table;
+            document.getElementById('average-placeholder').style.display = 'none';
+            hideLoadingOverlay();
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+// --- Sorted List Tab ---
+let sortedListData = null;
+let sortedListMode = 'average'; // 'average' or 'name'
+
+function renderSortedListTable(data, mode) {
+    let competencies = Object.keys(data).filter(c => c !== 'Overall').sort();
+    if ('Overall' in data) competencies.push('Overall');
+    if (!competencies.length) {
+        document.getElementById('sorted-list-table').innerHTML = '<div class="alert alert-warning">No data found for the selected filters.</div>';
+        document.getElementById('sorted-placeholder').style.display = 'none';
+        return;
+    }
+    if (mode === 'name') {
+        // Gather all unique student names
+        const studentMap = {};
+        competencies.forEach(comp => {
+            data[comp].forEach(s => {
+                studentMap[s.student_name] = studentMap[s.student_name] || {};
+                studentMap[s.student_name][comp] = s;
+            });
+        });
+        const studentNames = Object.keys(studentMap).sort();
+        // Build table header
+        let table = '<table class="table table-bordered align-middle"><thead><tr><th>Student Name</th>';
+        competencies.forEach(comp => { table += `<th>${comp}</th>`; });
+        table += '</tr></thead><tbody>';
+        // Build table rows
+        studentNames.forEach(name => {
+            table += '<tr>';
+            table += `<td><strong>${name}</strong></td>`;
+            competencies.forEach(comp => {
+                const s = studentMap[name][comp];
+                if (s) {
+                    let bucketClass = '';
+                    if (s.bucket === 'Green') bucketClass = 'bg-success text-white';
+                    else if (s.bucket === 'Blue') bucketClass = 'bg-info text-dark';
+                    else if (s.bucket === 'Red') bucketClass = 'bg-danger text-white';
+                    table += `<td class="${bucketClass}">${s.average.toFixed(2)}%</td>`;
+    } else {
+                    table += '<td></td>';
+                }
+            });
+            table += '</tr>';
+        });
+        table += '</tbody></table>';
+        document.getElementById('sorted-list-table').innerHTML = table;
+        document.getElementById('sorted-placeholder').style.display = 'none';
+        return;
+    }
+    // Default: sort by average (with name as tie-breaker)
+    const sortedData = {};
+    competencies.forEach(comp => {
+        sortedData[comp] = [...data[comp]];
+        sortedData[comp].sort((a, b) => b.average - a.average || a.student_name.localeCompare(b.student_name));
+    });
+    // Find max number of students in any column
+    let maxRows = 0;
+    competencies.forEach(comp => {
+        if (sortedData[comp].length > maxRows) maxRows = sortedData[comp].length;
+    });
+    // Build table header
+    let table = '<table class="table table-bordered align-middle"><thead><tr>';
+    competencies.forEach(comp => {
+        table += `<th>${comp}</th>`;
+    });
+    table += '</tr></thead><tbody>';
+    // Build table rows
+    for (let i = 0; i < maxRows; i++) {
+        table += '<tr>';
+        competencies.forEach(comp => {
+            const student = sortedData[comp][i];
+            if (student) {
+                let bucketClass = '';
+                if (student.bucket === 'Green') bucketClass = 'bg-success text-white';
+                else if (student.bucket === 'Blue') bucketClass = 'bg-info text-dark';
+                else if (student.bucket === 'Red') bucketClass = 'bg-danger text-white';
+                table += `<td class="${bucketClass}"><div><strong>${student.student_name}</strong></div><div>${student.average.toFixed(2)}%</div></td>`;
+    } else {
+                table += '<td></td>';
+            }
+        });
+        table += '</tr>';
+    }
+    table += '</tbody></table>';
+    document.getElementById('sorted-list-table').innerHTML = table;
+    document.getElementById('sorted-placeholder').style.display = 'none';
+}
+
+function fetchSortedListDataAndRender() {
+    showLoadingOverlay();
+    const params = new URLSearchParams(getFilterParams());
+    fetch(`/dashboard/kaleidoscope/sorted_list?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            sortedListData = data;
+            renderSortedListTable(sortedListData, sortedListMode);
+            hideLoadingOverlay();
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const avgBtn = document.getElementById('sort-by-average');
+    const nameBtn = document.getElementById('sort-by-name');
+    if (avgBtn && nameBtn) {
+        avgBtn.classList.add('active');
+        avgBtn.addEventListener('click', function() {
+            sortedListMode = 'average';
+            avgBtn.classList.add('active', 'btn-primary');
+            avgBtn.classList.remove('btn-outline-primary');
+            nameBtn.classList.remove('active', 'btn-secondary');
+            nameBtn.classList.add('btn-outline-secondary');
+            if (sortedListData) renderSortedListTable(sortedListData, sortedListMode);
+        });
+        nameBtn.addEventListener('click', function() {
+            sortedListMode = 'name';
+            nameBtn.classList.add('active', 'btn-secondary');
+            nameBtn.classList.remove('btn-outline-secondary');
+            avgBtn.classList.remove('active', 'btn-primary');
+            avgBtn.classList.add('btn-outline-primary');
+            if (sortedListData) renderSortedListTable(sortedListData, sortedListMode);
+        });
+    }
+});
+// --- Student Table Tab ---
+function fetchStudentTableDataAndRender() {
+    showLoadingOverlay();
+    // Placeholder for future implementation
+    document.getElementById('student-table-content').innerHTML = '<div class="alert alert-info">Student table will be shown here.</div>';
+    document.getElementById('student-table-placeholder').style.display = 'none';
+    hideLoadingOverlay();
+}
+// --- Summary Tab ---
+function fetchSummaryDataAndRender() {
+    showLoadingOverlay();
+    // Placeholder for future implementation
+    document.getElementById('summary-content').innerHTML = '<div class="alert alert-info">Summary will be shown here.</div>';
+    document.getElementById('summary-placeholder').style.display = 'none';
+    hideLoadingOverlay();
+}
+// --- Portfolio Tab ---
+let portfolioStudentId = null;
+let portfolioSearchTimeout = null;
+
+function renderPortfolioContent(data, student) {
+    let html = '';
+    // Student header
+    if (student) {
+        html += `<div class="mb-3"><h5>Portfolio for <span class="text-primary">${student.student_name}</span> <span class="badge bg-secondary">${student.student_id}</span></h5></div>`;
+    }
+    // Assessment averages as grouped bar chart (no table, no standardized/non-standardized distinction)
+    const averages = Array.isArray(data.assessment_averages) ? data.assessment_averages : [];
+    if (averages.length) {
+        html += `<div class=\"mb-4\"><h6>Subject-wise Averages</h6><div id=\"portfolio-averages-chart\" style=\"height:380px;\"></div></div>`;
+            } else {
+        html += '<div class=\"alert alert-warning\">No assessment data found for this student.</div>';
+    }
+    // Competency strengths/areas to improve section (grouped by year and assessment type)
+    if (data.competency_summary && Object.keys(data.competency_summary).length) {
+        html += `<div class=\"mb-4\"><h6>Competency Strengths & Areas to Improve</h6>`;
+        Object.entries(data.competency_summary).forEach(([subject, yearDict]) => {
+            html += `<div class=\"card mb-3 shadow-sm fade-in\"><div class=\"card-body\"><h6 class=\"card-title mb-3\">${subject}</h6>`;
+            // Sort years descending (latest first)
+            const sortedYears = Object.keys(yearDict).sort((a, b) => b.localeCompare(a));
+            sortedYears.forEach(year => {
+                const typeDict = yearDict[year];
+                html += `<div class=\"mb-2\"><strong>Academic Year:</strong> <span class=\"badge bg-primary\">${year}</span></div>`;
+                // Sort assessment types: EOY, MOY, then others alphabetically
+                const sortedTypes = Object.keys(typeDict).sort((a, b) => {
+                    const order = {EOY: 0, MOY: 1};
+                    const aOrder = order[a] !== undefined ? order[a] : 2;
+                    const bOrder = order[b] !== undefined ? order[b] : 2;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    return a.localeCompare(b);
+                });
+                sortedTypes.forEach(atype => {
+                    const summary = typeDict[atype];
+                    html += `<div class=\"mb-2\"><strong>Assessment Type:</strong> <span class=\"badge bg-info text-dark\">${atype}</span></div>`;
+                    html += `<div class=\"row\">`;
+                    html += `<div class=\"col-md-6 mb-1\"><span class=\"me-1\">✅</span><strong>Good at:</strong> `;
+                    if (summary.good && summary.good.length) {
+                        html += summary.good.map(c => `<span class=\"badge bg-success me-1 mb-1\">${c}</span>`).join(' ');
+                    } else {
+                        html += '<span class=\"text-muted\">None</span>';
+                    }
+                    html += `</div>`;
+                    html += `<div class=\"col-md-6 mb-1\"><span class=\"me-1\">⚠️</span><strong>Needs Improvement:</strong> `;
+                    if (summary.needs_improvement && summary.needs_improvement.length) {
+                        html += summary.needs_improvement.map(c => `<span class=\"badge bg-danger me-1 mb-1\">${c}</span>`).join(' ');
+                    } else {
+                        html += '<span class=\"text-muted\">None</span>';
+                    }
+                    html += `</div></div><hr class=\"my-2\">`;
+                });
+            });
+            html += `</div></div>`;
+        });
+        html += `</div>`;
+        // Add fade-in animation CSS
+        if (!document.getElementById('portfolio-competency-fadein-style')) {
+            const style = document.createElement('style');
+            style.id = 'portfolio-competency-fadein-style';
+            style.innerHTML = `.fade-in {animation: fadeInCard 0.7s ease;}@keyframes fadeInCard{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}`;
+            document.head.appendChild(style);
+        }
+    }
+    // Competency Progression toggle and section
+    let showProgression = false;
+    html += `<div class=\"mb-3\"><div class=\"form-check form-switch\">
+        <input class=\"form-check-input\" type=\"checkbox\" id=\"toggle-competency-progression\">
+        <label class=\"form-check-label\" for=\"toggle-competency-progression\">Show Competency Progression Over Years</label>
+    </div></div>`;
+    html += `<div id=\"competency-progression-wrapper\" style=\"display:none;\"></div>`;
+    document.getElementById('portfolio-content').innerHTML = html;
+    // Render the chart after the HTML is set
+    if (averages.length) {
+        // Prepare traces for Plotly
+        // Group by (assessment_type, academic_year)
+        const groupKey = r => `${r.assessment_type || ''} | ${r.academic_year || ''}`;
+        const groups = {};
+        const allSubjects = Array.from(new Set(averages.map(r => r.subject))).sort();
+        averages.forEach(r => {
+            const key = groupKey(r);
+            if (!groups[key]) groups[key] = {x: [], y: [], name: key};
+            groups[key].x.push(r.subject);
+            groups[key].y.push(r.average !== null && r.average !== undefined ? r.average : 0);
+        });
+        // Generate unique colors for each group
+        const palette = [
+            '#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf',
+            '#a6cee3','#b2df8a','#fb9a99','#fdbf6f','#cab2d6','#ffff99','#6a3d9a','#b15928'
+        ];
+        // Sort traces: academic year ascending, then assessment type descending (MOY > EOY > others reverse alpha)
+        function parseYear(yr) { if (!yr) return 0; const match = yr.match(/(\d{4})/); return match ? parseInt(match[1], 10) : 0; }
+        function typePriority(type) { if (type === 'MOY') return 2; if (type === 'EOY') return 1; return 0; }
+        const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
+            const [aType, aYear] = a.split('|').map(s => s.trim());
+            const [bType, bYear] = b.split('|').map(s => s.trim());
+            const yearDiff = parseYear(aYear) - parseYear(bYear);
+            if (yearDiff !== 0) return yearDiff;
+            const aPri = typePriority(aType), bPri = typePriority(bType);
+            if (aPri !== bPri) return bPri - aPri;
+            return bType.localeCompare(aType);
+        });
+        const traces = sortedGroupKeys.map((key, i) => {
+            const g = groups[key];
+    return {
+                x: allSubjects,
+                y: allSubjects.map(subj => {
+                    const idx = g.x.indexOf(subj);
+                    return idx !== -1 ? g.y[idx] : 0;
+                }),
+                name: g.name,
+      type: 'bar',
+                marker: {color: palette[i % palette.length]},
+                text: allSubjects.map(subj => {
+                    const idx = g.x.indexOf(subj);
+                    return idx !== -1 && g.y[idx] !== null && g.y[idx] !== undefined ? g.y[idx].toFixed(1) + '%' : '-';
+                }),
+                textposition: 'auto',
+                hovertemplate: '%{x}<br>Average: %{y:.2f}%<br>'+g.name+'<extra></extra>'
+    };
+  });
+        Plotly.newPlot('portfolio-averages-chart', traces, {
+            barmode: 'group',
+            title: 'Subject-wise Averages by Assessment Type & Academic Year',
+            yaxis: {title: 'Average (%)', range: [0, 100]},
+            xaxis: {title: 'Subject'},
+            legend: {orientation: 'h', y: -0.2}
+        });
+    }
+    // Render competency progression charts only if toggled on
+    const wrapper = document.getElementById('competency-progression-wrapper');
+    if (data.competency_progression && Object.keys(data.competency_progression).length) {
+        let progHtml = `<div class=\"mb-4\"><h6>Competency Progression Over Years</h6>`;
+        Object.entries(data.competency_progression).forEach(([subject, compDict]) => {
+            progHtml += `<div class=\"card mb-3 shadow-sm fade-in\"><div class=\"card-body\"><h6 class=\"card-title mb-3\">${subject}</h6>`;
+            Object.entries(compDict).forEach(([comp, points], idx) => {
+                const chartId = `progression-${subject.replace(/\W/g,'_')}-${comp.replace(/\W/g,'_')}`;
+                progHtml += `<div class=\"mb-3\"><div class=\"fw-bold mb-1\">${comp}</div><div id=\"${chartId}\" style=\"height:180px;\"></div></div>`;
+            });
+            progHtml += `</div></div>`;
+        });
+        progHtml += `</div>`;
+        wrapper.innerHTML = progHtml;
+    }
+    // Attendance table and chart (always below progression section)
+    if (Array.isArray(data.attendance) && data.attendance.length) {
+        // Group attendance by month, then by academic year
+        const monthOrder = ['June','July','August','September','October','November','December','January','February','March','April'];
+        const monthOrderWithOverall = [...monthOrder, 'Overall'];
+        const attGrouped = {};
+        const yearsSet = new Set();
+        data.attendance.forEach(row => {
+            if (!attGrouped[row.month]) attGrouped[row.month] = {};
+            attGrouped[row.month][row.academic_year] = row;
+            yearsSet.add(row.academic_year);
+        });
+        const years = Array.from(yearsSet).sort();
+        let attHtml = `<div class=\"mb-4\"><h6>Attendance by Month</h6><div class=\"table-responsive\"><table class=\"table table-bordered align-middle\"><thead>`;
+        // Header row 1: Academic Years
+        attHtml += '<tr><th rowspan="2">Month</th>';
+        years.forEach(y => { attHtml += `<th colspan="3" class=\"text-center attendance-year-header\">${y}</th>`; });
+        attHtml += '</tr>';
+        // Header row 2: Sub-columns
+        attHtml += '<tr>';
+        years.forEach((y, idx) => {
+            attHtml += `<th class=\"attendance-year-cell\">Present</th><th class=\"attendance-year-cell\">Working</th><th class=\"attendance-year-cell attendance-year-last\">%</th>`;
+        });
+        attHtml += '</tr></thead><tbody>';
+        // Rows
+        monthOrder.forEach(month => {
+            let hasData = false;
+            if (attGrouped[month]) {
+                for (const y of years) {
+                    if (attGrouped[month][y]) { hasData = true; break; }
+                }
+            }
+            if (!hasData) return;
+            attHtml += `<tr><td>${month}</td>`;
+            years.forEach((y, idx) => {
+                const row = attGrouped[month] ? attGrouped[month][y] : undefined;
+                attHtml += `<td class=\"attendance-year-cell\">${row ? (row.present ?? '-') : '-'}</td>`;
+                attHtml += `<td class=\"attendance-year-cell\">${row ? (row.working ?? '-') : '-'}</td>`;
+                attHtml += `<td class=\"attendance-year-cell attendance-year-last\">${row && row.attendance_percentage !== null && row.attendance_percentage !== undefined ? row.attendance_percentage.toFixed(2) + '%' : '-'}</td>`;
+            });
+            attHtml += '</tr>';
+        });
+        // Overall row
+        attHtml += '<tr class="table-secondary fw-bold"><td>Overall</td>';
+        years.forEach((y, idx) => {
+            // Sum present and working days for this year
+            let totalPresent = 0, totalWorking = 0;
+            monthOrder.forEach(month => {
+                const row = attGrouped[month] ? attGrouped[month][y] : undefined;
+                if (row) {
+                    totalPresent += Number(row.present) || 0;
+                    totalWorking += Number(row.working) || 0;
+                }
+            });
+            let overallPct = (totalWorking > 0) ? (totalPresent / totalWorking * 100) : null;
+            attHtml += `<td class=\"attendance-year-cell\">${totalPresent > 0 ? totalPresent : '-'}</td>`;
+            attHtml += `<td class=\"attendance-year-cell\">${totalWorking > 0 ? totalWorking : '-'}</td>`;
+            attHtml += `<td class=\"attendance-year-cell attendance-year-last\">${overallPct !== null ? overallPct.toFixed(2) + '%' : '-'}</td>`;
+        });
+        attHtml += '</tr>';
+        attHtml += '</tbody></table></div>';
+        attHtml += `<div id=\"portfolio-attendance-chart\" style=\"height:320px;\"></div>`;
+        attHtml += `<div id=\"portfolio-attendance-overall-bar\" style=\"height:220px; margin-top:24px;\"></div>`;
+        document.getElementById('competency-progression-wrapper').insertAdjacentHTML('afterend', attHtml);
+        setTimeout(() => {
+            // --- Monthly + Overall attendance % bar graph ---
+            let chartData = [];
+            let overallPercents = [];
+            years.forEach((y, idx) => {
+                // Monthly data
+                const months = monthOrder.slice();
+                const percentages = months.map(m => attGrouped[m] && attGrouped[m][y] ? attGrouped[m][y].attendance_percentage : null);
+                // Overall calculation
+                let totalPresent = 0, totalWorking = 0;
+                monthOrder.forEach(month => {
+                    const row = attGrouped[month] ? attGrouped[month][y] : undefined;
+                    if (row) {
+                        totalPresent += Number(row.present) || 0;
+                        totalWorking += Number(row.working) || 0;
+                    }
+                });
+                let overallPct = (totalWorking > 0) ? (totalPresent / totalWorking * 100) : null;
+                overallPercents.push(overallPct !== null ? overallPct : 0);
+                // Add 'Overall' to months and percentages
+                const monthsWithOverall = [...months, 'Overall'];
+                const percentagesWithOverall = [...percentages, overallPct];
+                chartData.push({
+                    x: monthsWithOverall,
+                    y: percentagesWithOverall,
+                    type: 'bar',
+                    name: y,
+                    marker: {color: idx === 0 ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 193, 7, 0.7)'},
+                    text: percentagesWithOverall.map(a => a !== null && a !== undefined ? a.toFixed(2) + '%' : '-'),
+                    textposition: 'auto',
+                    hovertemplate: '%{x}<br>Attendance: %{y:.2f}%<br>Year: '+y+'<extra></extra>'
+  });
+});
+            Plotly.newPlot('portfolio-attendance-chart', chartData, {
+                title: 'Attendance % by Month (and Overall)',
+                yaxis: {title: 'Attendance %', range: [0, 100]},
+                xaxis: {title: 'Month', categoryorder: 'array', categoryarray: monthOrderWithOverall},
+                barmode: years.length > 1 ? 'group' : 'stack',
+                legend: {orientation: 'h', y: -0.2}
+            });
+        }, 100);
+      } else {
+        document.getElementById('competency-progression-wrapper').insertAdjacentHTML('afterend', '<div class=\"alert alert-warning\">No attendance data found for this student.</div>');
+    }
+    document.getElementById('toggle-competency-progression').addEventListener('change', function(e) {
+        if (e.target.checked) {
+            wrapper.style.display = '';
+            // Render charts if not already rendered
+            if (data.competency_progression && Object.keys(data.competency_progression).length) {
+                Object.entries(data.competency_progression).forEach(([subject, compDict]) => {
+                    Object.entries(compDict).forEach(([comp, points]) => {
+                        const chartId = `progression-${subject.replace(/\W/g,'_')}-${comp.replace(/\W/g,'_')}`;
+                        const x = points.map(p => `${p.year} ${p.type}`);
+                        const y = points.map(p => p.avg);
+                        const marks = points.map(p => `${p.obtained} / ${p.max}`);
+                        Plotly.newPlot(chartId, [{
+                            x, y,
+                            mode: 'lines+markers',
+                            line: {shape: 'linear', color: '#4f8cff'},
+                            marker: {color: '#38c6ff', size: 8},
+                            text: y.map((a, i) => a !== null && a !== undefined ? `${a.toFixed(1)}%\nMarks: ${marks[i]}` : '-'),
+                            hovertemplate: '%{x}<br>Average: %{y:.2f}%<br>Marks: %{customdata}<extra></extra>',
+                            customdata: marks
+                        }], {
+                            margin: {t: 20, b: 40, l: 40, r: 10},
+                            yaxis: {title: 'Average (%)', range: [0, 100]},
+                            xaxis: {title: 'Year & Type', tickangle: -30, automargin: true},
+                            showlegend: false,
+                            height: 180
+                        }, {displayModeBar: false});
+                    });
+                });
+            }
+          } else {
+            wrapper.style.display = 'none';
+        }
+      });
+    }
+
+function fetchPortfolioData(studentId, studentObj) {
+    if (!studentId) return;
+    showLoadingOverlay();
+    fetch(`/dashboard/kaleidoscope/portfolio_data?student_id=${encodeURIComponent(studentId)}`)
+        .then(response => response.json())
+        .then(data => {
+            renderPortfolioContent(data, studentObj);
+            hideLoadingOverlay();
+        })
+        .catch(() => { hideLoadingOverlay(); });
+}
+
+document.getElementById('portfolio-student-search').addEventListener('input', function(e) {
+    const query = e.target.value.trim();
+    if (portfolioSearchTimeout) clearTimeout(portfolioSearchTimeout);
+    if (query.length < 2) return;
+    portfolioSearchTimeout = setTimeout(() => {
+        fetch(`/dashboard/kaleidoscope/student_search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(results => {
+                let dropdown = document.getElementById('portfolio-search-dropdown');
+                if (!dropdown) {
+                    dropdown = document.createElement('div');
+                    dropdown.id = 'portfolio-search-dropdown';
+                    dropdown.className = 'list-group position-absolute w-100';
+                    document.getElementById('portfolio-student-search').parentNode.appendChild(dropdown);
+                }
+                dropdown.innerHTML = '';
+                results.forEach(student => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'list-group-item list-group-item-action';
+                    item.textContent = `${student.student_name} (${student.student_id})`;
+                    item.onclick = function() {
+                        document.getElementById('portfolio-student-search').value = `${student.student_name} (${student.student_id})`;
+                        dropdown.innerHTML = '';
+                        portfolioStudentId = student.student_id;
+                        fetchPortfolioData(portfolioStudentId, student);
+                    };
+                    dropdown.appendChild(item);
+                });
+                if (results.length === 0) dropdown.innerHTML = '<div class="list-group-item">No students found</div>';
+            });
+    }, 300);
+});
+
+document.getElementById('portfolio-tab').addEventListener('shown.bs.tab', function() {
+    document.getElementById('portfolio-content').innerHTML = '<div class="text-muted">Select a student to view their portfolio.</div>';
+    document.getElementById('portfolio-student-search').value = '';
+    let dropdown = document.getElementById('portfolio-search-dropdown');
+    if (dropdown) dropdown.innerHTML = '';
+});
+// --- Tab and Filter Event Listeners ---
+['assessmentType','academicYear','subject','school','grade','division'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function() {
+        if (document.getElementById('competency').classList.contains('active')) fetchCompetencyDataAndRender();
+        if (document.getElementById('bucket').classList.contains('active')) fetchBucketDataAndRender();
+        if (document.getElementById('average').classList.contains('active')) fetchAverageDataAndRender();
+        if (document.getElementById('sorted').classList.contains('active')) fetchSortedListDataAndRender();
+        if (document.getElementById('student-table').classList.contains('active')) fetchStudentTableDataAndRender();
+        if (document.getElementById('summary').classList.contains('active')) fetchSummaryDataAndRender();
+    });
+});
+document.getElementById('competency-tab').addEventListener('shown.bs.tab', fetchCompetencyDataAndRender);
+document.getElementById('bucket-tab').addEventListener('shown.bs.tab', fetchBucketDataAndRender);
+document.getElementById('average-tab').addEventListener('shown.bs.tab', fetchAverageDataAndRender);
+document.getElementById('sorted-tab').addEventListener('shown.bs.tab', fetchSortedListDataAndRender);
+document.getElementById('student-table-tab').addEventListener('shown.bs.tab', fetchStudentTableDataAndRender);
+document.getElementById('summary-tab').addEventListener('shown.bs.tab', fetchSummaryDataAndRender);
+// Hide filters when Portfolio tab is active, show otherwise
+function toggleKaleidoscopeFilters() {
+    const filters = document.getElementById('kaleidoscope-filters-wrapper');
+    if (!filters) return;
+    const portfolioTab = document.getElementById('portfolio-tab');
+    if (portfolioTab.classList.contains('active')) {
+        filters.style.display = 'none';
+        } else {
+        filters.style.display = '';
+    }
+}
+// Attach to tab shown events
+['competency-tab','bucket-tab','average-tab','sorted-tab','student-table-tab','summary-tab','portfolio-tab'].forEach(id => {
+    document.getElementById(id).addEventListener('shown.bs.tab', toggleKaleidoscopeFilters);
+});
+// Initial toggle
+window.addEventListener('DOMContentLoaded', toggleKaleidoscopeFilters);
+// Initial render
+fetchCompetencyDataAndRender();
+
+// Add this function to describe the trend in detail
+function describeCompetencyTrend(data, labels) {
+    if (!data || data.length < 2 || !labels || labels.length !== data.length)
+        return "Not enough data to describe the trend.";
+    // Find min, max, their labels
+    let min = data[0], max = data[0], minIdx = 0, maxIdx = 0;
+    for (let i = 1; i < data.length; i++) {
+        if (data[i] < min) { min = data[i]; minIdx = i; }
+        if (data[i] > max) { max = data[i]; maxIdx = i; }
+    }
+    const avg = data.reduce((a, b) => a + b, 0) / data.length;
+    const first = data[0], last = data[data.length - 1];
+    const change = last - first;
+    const percentChange = ((change) / (first || 1)) * 100;
+    let direction = "stable";
+    if (percentChange > 5) direction = "increasing";
+    else if (percentChange < -5) direction = "decreasing";
+    let rate = "slow";
+    if (Math.abs(percentChange) > 20) rate = "rapid";
+    else if (Math.abs(percentChange) > 10) rate = "moderate";
+    // Largest jump/drop
+    let maxJump = 0, maxDrop = 0, jumpIdx = -1, dropIdx = -1;
+    for (let i = 1; i < data.length; i++) {
+        const diff = data[i] - data[i-1];
+        if (diff > maxJump) { maxJump = diff; jumpIdx = i; }
+        if (diff < maxDrop) { maxDrop = diff; dropIdx = i; }
+    }
+    // Outlier detection (simple: >15% from mean)
+    let outliers = [];
+    for (let i = 0; i < data.length; i++) {
+        if (Math.abs(data[i] - avg) > 15) outliers.push(labels[i]);
+    }
+    // Erratic check
+    let signChanges = 0;
+    for (let i = 2; i < data.length; i++) {
+        if ((data[i-2] - data[i-1]) * (data[i-1] - data[i]) < 0) signChanges++;
+    }
+    let erratic = signChanges > Math.floor(data.length/3);
+    let description = `Across the selected competencies, the trend is <b>${direction}</b> at a <b>${rate}</b> rate. `;
+    description += `It started at <b>${first.toFixed(1)}%</b> (${labels[0]}) and ended at <b>${last.toFixed(1)}%</b> (${labels[labels.length-1]}). `;
+    description += `The average competency is <b>${avg.toFixed(1)}%</b>. `;
+    description += `The highest was <b>${max.toFixed(1)}%</b> (${labels[maxIdx]}), and the lowest was <b>${min.toFixed(1)}%</b> (${labels[minIdx]}). `;
+    if (maxJump > 0) description += `The largest increase was <b>+${maxJump.toFixed(1)}%</b> from <b>${labels[jumpIdx-1]}</b> to <b>${labels[jumpIdx]}</b>. `;
+    if (maxDrop < 0) description += `The largest drop was <b>${maxDrop.toFixed(1)}%</b> from <b>${labels[dropIdx-1]}</b> to <b>${labels[dropIdx]}</b>. `;
+    if (erratic) description += "The trend is quite erratic, with several ups and downs. ";
+    if (outliers.length) description += `Notably, ${outliers.map(l => `<b>${l}</b>`).join(', ')} stand out as outliers. `;
+    return description;
+}
+function showCompetencyTrendDescription(data, labels) {
+    const desc = describeCompetencyTrend(data, labels);
+    const el = document.getElementById('competency-trend-description');
+    if (el) {
+        el.innerHTML = desc;
+        el.style.display = 'block';
+    }
+}
+function fetchAndShowSkillsChart(competency, isOverall = false) {
+    // Optionally show a loading indicator here
+    let url = '/dashboard/kaleidoscope/skills_data?';
+    if (!isOverall && competency) {
+        url += 'competency=' + encodeURIComponent(competency) + '&';
+    }
+    url += new URLSearchParams(getFilterParams());
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.length) {
+                document.getElementById('skills-bar-chart').innerHTML = '<div class="alert alert-warning">No skill data found for these filters.</div>';
+                const modal = new bootstrap.Modal(document.getElementById('skillsModal'));
+                modal.show();
+                return;
+            }
+            const x = data.map(d => d.skill);
+            const y = data.map(d => d.avg);
+            const barColors = y.map(avg => getBucketColor(avg));
+            const skillData = [{
+                x, y, type: 'bar',
+                marker: {color: barColors},
+                text: y.map(a => a.toFixed(1) + '%'),
+                textposition: 'auto'
+            }];
+            const zeroSkillData = [{
+                ...skillData[0],
+                y: y.map(() => 0),
+                text: y.map(() => '0.0%')
+            }];
+            Plotly.newPlot('skills-bar-chart', zeroSkillData, {
+                title: isOverall ? 'Average Skill Scores (All Competencies)' : `Average Skill Scores in ${competency}`,
+                yaxis: {title: 'Average (%)', range: [0, 100]},
+                xaxis: {title: 'Skill'},
+                autosize: true,
+                width: document.getElementById('skills-bar-chart').offsetWidth,
+                height: 600
+            }, {responsive: true}).then(() => {
+                Plotly.animate('skills-bar-chart', {
+                    data: skillData
+                }, {
+                    transition: {duration: 900, easing: 'cubic-in-out'},
+                    frame: {duration: 900, redraw: false}
+                });
+            });
+            const modal = new bootstrap.Modal(document.getElementById('skillsModal'));
+            modal.show();
+        });
+}
+  </script>
+{% endblock %}
+
+
+

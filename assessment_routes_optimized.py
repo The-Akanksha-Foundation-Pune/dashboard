@@ -110,134 +110,93 @@ def get_consolidated_performance_chart():
 
             results = query.all()
 
+            # Exclude Grade 9 and Grade 10
+            exclude_grades = {'GRADE 9', 'Grade 9', 'Gr. 9', '9', 'GRADE 10', 'Grade 10', 'Gr. 10', '10'}
+            filtered_results = [r for r in results if r[1] not in exclude_grades]
+
             # Get unique schools from the results
-            schools = sorted(list(set([r[0] for r in results if r[0]])))
+            schools = sorted(list(set([r[0] for r in filtered_results if r[0]])))
+            grades = sorted(list(set([r[1] for r in filtered_results if r[1]])))
 
-            # Create a default city mapping
-            school_to_city = {}
-            for school in schools:
-                # Default city assignment based on school name patterns
-                if "Mumbai" in school or "NMMC" in school:
-                    school_to_city[school] = "Mumbai"
-                elif "Pune" in school:
-                    school_to_city[school] = "Pune"
-                elif "Nagpur" in school:
-                    school_to_city[school] = "Nagpur"
-                else:
-                    school_to_city[school] = "Unknown"
-
-            # Try to get city information from the City model if available
-            try:
-                city_query = session.query(
-                    City.school_name,
-                    City.city
-                ).filter(
-                    City.school_name.isnot(None),
-                    City.city.isnot(None)
-                ).distinct()
-
-                city_results = city_query.all()
-
-                # Update the mapping with actual data from the database
-                for school, city in city_results:
-                    if school and city:
-                        school_to_city[school] = city
-            except Exception as e:
-                logger.warning(f"Could not fetch city data: {e}. Using default city assignments.")
-
-        # Process results
-        performance_data = {}
-
-        # Get unique schools and grades
-        schools = sorted(list(set([r[0] for r in results if r[0]])))
-        grades = sorted(list(set([r[1] for r in results if r[1]])))
-
-        # Sort grades in a logical order
-        grade_order = {
-            'Nursery': 0, 'Jr.KG': 1, 'JR.KG': 1, 'Jr.kG': 1,
-            'SR.KG': 2, 'Sr.KG': 2, 'Sr.kG': 2,
-            'GRADE 1': 3, 'Grade 1': 3, 'Gr. 1': 3, '1': 3,
-            'GRADE 2': 4, 'Grade 2': 4, 'Gr. 2': 4, '2': 4,
-            'GRADE 3': 5, 'Grade 3': 5, 'Gr. 3': 5, '3': 5,
-            'GRADE 4': 6, 'Grade 4': 6, 'Gr. 4': 6, '4': 6,
-            'GRADE 5': 7, 'Grade 5': 7, 'Gr. 5': 7, '5': 7,
-            'GRADE 6': 8, 'Grade 6': 8, 'Gr. 6': 8, '6': 8,
-            'GRADE 7': 9, 'Grade 7': 9, 'Gr. 7': 9, '7': 9,
-            'GRADE 8': 10, 'Grade 8': 10, 'Gr. 8': 10, '8': 10,
-            'GRADE 9': 11, 'Grade 9': 11, 'Gr. 9': 11, '9': 11,
-            'GRADE 10': 12, 'Grade 10': 12, 'Gr. 10': 10, '10': 12
-        }
-
-        # Sort grades based on the defined order
-        grades = sorted(grades, key=lambda x: grade_order.get(x, 999))
-
-        # Initialize data structure
-        for school in schools:
-            performance_data[school] = {
-                'grades': {},
-                'city': school_to_city.get(school, 'Unknown')
+            # Sort grades in a logical order
+            grade_order = {
+                'Nursery': 0, 'Jr.KG': 1, 'JR.KG': 1, 'Jr.kG': 1,
+                'SR.KG': 2, 'Sr.KG': 2, 'Sr.kG': 2,
+                'GRADE 1': 3, 'Grade 1': 3, 'Gr. 1': 3, '1': 3,
+                'GRADE 2': 4, 'Grade 2': 4, 'Gr. 2': 4, '2': 4,
+                'GRADE 3': 5, 'Grade 3': 5, 'Gr. 3': 5, '3': 5,
+                'GRADE 4': 6, 'Grade 4': 6, 'Gr. 4': 6, '4': 6,
+                'GRADE 5': 7, 'Grade 5': 7, 'Gr. 5': 7, '5': 7,
+                'GRADE 6': 8, 'Grade 6': 8, 'Gr. 6': 8, '6': 8,
+                'GRADE 7': 9, 'Grade 7': 9, 'Gr. 7': 9, '7': 9,
+                'GRADE 8': 10, 'Grade 8': 10, 'Gr. 8': 10, '8': 10
             }
+            grades = sorted(grades, key=lambda x: grade_order.get(x, 999))
 
-            for grade in grades:
-                performance_data[school]['grades'][grade] = None
+            # Initialize data structure
+            performance_data = {}
+            for school in schools:
+                performance_data[school] = {
+                    'grades': {},
+                    'city': 'Unknown'
+                }
+                for grade in grades:
+                    performance_data[school]['grades'][grade] = None
 
-        # Fill in the data
-        for school, grade, obtained, maximum in results:
-            if school and grade and maximum > 0:
-                percentage = round((obtained / maximum) * 100, 2)
-                if school in performance_data:
-                    performance_data[school]['grades'][grade] = percentage
+            # Fill in the data
+            for school, grade, obtained, maximum in filtered_results:
+                if school and grade and maximum > 0:
+                    percentage = round((obtained / maximum) * 100, 2)
+                    if school in performance_data:
+                        performance_data[school]['grades'][grade] = percentage
 
-        # Group schools by city
-        cities = {}
-        for school, data in performance_data.items():
-            city = data['city']
-            if city not in cities:
-                cities[city] = []
-            cities[city].append(school)
+            # Group schools by city
+            cities = {}
+            for school, data in performance_data.items():
+                city = data['city']
+                if city not in cities:
+                    cities[city] = []
+                cities[city].append(school)
 
-        # Calculate city averages
-        city_averages = {}
-        for city, city_schools in cities.items():
-            city_averages[city] = {'grades': {}}
+            # Calculate city averages
+            city_averages = {}
+            for city, city_schools in cities.items():
+                city_averages[city] = {'grades': {}}
+                for grade in grades:
+                    grade_values = []
+                    for school in city_schools:
+                        if school in performance_data and grade in performance_data[school]['grades']:
+                            value = performance_data[school]['grades'].get(grade)
+                            if value is not None:
+                                grade_values.append(value)
+                    if grade_values:
+                        city_averages[city]['grades'][grade] = round(sum(grade_values) / len(grade_values), 2)
+                    else:
+                        city_averages[city]['grades'][grade] = None
+
+            # Calculate overall averages (Akanksha)
+            overall_averages = {'grades': {}}
             for grade in grades:
                 grade_values = []
-                for school in city_schools:
+                for school in schools:
                     if school in performance_data and grade in performance_data[school]['grades']:
                         value = performance_data[school]['grades'].get(grade)
                         if value is not None:
                             grade_values.append(value)
-
                 if grade_values:
-                    city_averages[city]['grades'][grade] = round(sum(grade_values) / len(grade_values), 2)
+                    overall_averages['grades'][grade] = round(sum(grade_values) / len(grade_values), 2)
                 else:
-                    city_averages[city]['grades'][grade] = None
+                    overall_averages['grades'][grade] = None
 
-        # Calculate overall averages (Akanksha)
-        overall_averages = {'grades': {}}
-        for grade in grades:
-            grade_values = []
-            for school in schools:
-                if school in performance_data and grade in performance_data[school]['grades']:
-                    value = performance_data[school]['grades'].get(grade)
-                    if value is not None:
-                        grade_values.append(value)
+            # Format the response
+            response = {
+                'grades': grades,
+                'schools': performance_data,
+                'cities': city_averages,
+                'overall': overall_averages
+            }
 
-            if grade_values:
-                overall_averages['grades'][grade] = round(sum(grade_values) / len(grade_values), 2)
-            else:
-                overall_averages['grades'][grade] = None
-
-        # Format the response
-        response = {
-            'grades': grades,
-            'schools': performance_data,
-            'cities': city_averages,
-            'overall': overall_averages
-        }
-
-        return jsonify(response)
-
+            return jsonify(response)
     except Exception as e:
         logger.error(f"Error getting consolidated performance chart data: {e}")
         return jsonify({"error": f"Failed to fetch chart data: {str(e)}"}), 500
@@ -454,13 +413,18 @@ def get_filters():
             min_date_str = min_date.strftime('%Y-%m-%d') if min_date else None
             max_date_str = max_date.strftime('%Y-%m-%d') if max_date else None
 
+            # Get unique cities from the City table
+            cities = session.query(City.city).distinct().all()
+            cities = sorted([c[0] for c in cities if c[0]])
+
         return jsonify({
             'academic_years': academic_years,
             'assessment_types': assessment_types,
             'date_range': {
                 'min': min_date_str,
                 'max': max_date_str
-            }
+            },
+            'cities': cities
         })
     except Exception as e:
         logger.error(f"Error getting assessment filters: {e}")
@@ -1157,3 +1121,140 @@ def export_data():
         logger.error(f"Error exporting assessment data: {e}")
         flash("An error occurred while exporting data. Please try again.", "danger")
         return redirect(url_for("assessment.view"))
+
+@assessment_bp.route('/chart/school_subject_performance', methods=['POST'])
+def get_school_subject_performance():
+    """Get subject performance data by school (pivot table)."""
+    try:
+        filters = request.get_json()
+        if not filters:
+            return jsonify({"error": "Missing filter data"}), 400
+
+        # Build filter conditions
+        conditions = build_filter_conditions(filters)
+
+        # Use our custom session scope
+        with session_scope() as session:
+            # Query for subject performance by school
+            query = session.query(
+                StudentAssessmentData.school_name,
+                StudentAssessmentData.subject_name,
+                func.sum(StudentAssessmentData.obtained_marks),
+                func.sum(StudentAssessmentData.max_marks)
+            ).filter(
+                *conditions,
+                StudentAssessmentData.school_name.isnot(None),
+                StudentAssessmentData.subject_name.isnot(None),
+                StudentAssessmentData.obtained_marks.isnot(None),
+                StudentAssessmentData.max_marks.isnot(None),
+                StudentAssessmentData.max_marks > 0
+            ).group_by(
+                StudentAssessmentData.school_name,
+                StudentAssessmentData.subject_name
+            )
+
+            results = query.all()
+
+            # Exclude subjects for Grade 9 and 10
+            exclude_grades = {'GRADE 9', 'Grade 9', 'Gr. 9', '9', 'GRADE 10', 'Grade 10', 'Gr. 10', '10'}
+            # Get mapping of (school, subject) to grade
+            grade_query = session.query(
+                StudentAssessmentData.school_name,
+                StudentAssessmentData.subject_name,
+                StudentAssessmentData.grade_name
+            ).filter(
+                *conditions,
+                StudentAssessmentData.school_name.isnot(None),
+                StudentAssessmentData.subject_name.isnot(None),
+                StudentAssessmentData.grade_name.isnot(None)
+            ).distinct()
+            grade_map = {(row[0], row[1]): row[2] for row in grade_query if row[2] not in exclude_grades}
+            filtered_results = [r for r in results if (r[0], r[1]) in grade_map]
+
+            # Get unique schools and subjects
+            schools = sorted(list(set([r[0] for r in filtered_results if r[0]])))
+            subjects = sorted(list(set([r[1] for r in filtered_results if r[1]])))
+
+            # Try to get city information from the City model if available
+            school_to_city = {}
+            try:
+                city_query = session.query(
+                    City.school_name,
+                    City.city
+                ).filter(
+                    City.school_name.isnot(None),
+                    City.city.isnot(None)
+                ).distinct()
+                city_results = city_query.all()
+                for school, city in city_results:
+                    if school and city:
+                        school_to_city[school] = city
+            except Exception as e:
+                logger.warning(f"Could not fetch city data: {e}. Using default city assignments.")
+
+            # Initialize data structure
+            performance_data = {}
+            for school in schools:
+                performance_data[school] = {
+                    'subjects': {},
+                    'city': school_to_city.get(school, 'Unknown')
+                }
+                for subject in subjects:
+                    performance_data[school]['subjects'][subject] = None
+
+            # Fill in the data
+            for school, subject, obtained, maximum in filtered_results:
+                if school and subject and maximum > 0:
+                    percentage = round((obtained / maximum) * 100, 2)
+                    if school in performance_data:
+                        performance_data[school]['subjects'][subject] = percentage
+
+            # Group schools by city
+            cities = {}
+            for school, data in performance_data.items():
+                city = data['city']
+                if city not in cities:
+                    cities[city] = []
+                cities[city].append(school)
+
+            # Calculate city averages
+            city_averages = {}
+            for city, city_schools in cities.items():
+                city_averages[city] = {'subjects': {}}
+                for subject in subjects:
+                    subject_values = []
+                    for school in city_schools:
+                        if school in performance_data and subject in performance_data[school]['subjects']:
+                            value = performance_data[school]['subjects'].get(subject)
+                            if value is not None:
+                                subject_values.append(value)
+                    if subject_values:
+                        city_averages[city]['subjects'][subject] = round(sum(subject_values) / len(subject_values), 2)
+                    else:
+                        city_averages[city]['subjects'][subject] = None
+
+            # Calculate overall averages
+            overall_averages = {'subjects': {}}
+            for subject in subjects:
+                subject_values = []
+                for school in schools:
+                    if school in performance_data and subject in performance_data[school]['subjects']:
+                        value = performance_data[school]['subjects'].get(subject)
+                        if value is not None:
+                            subject_values.append(value)
+                if subject_values:
+                    overall_averages['subjects'][subject] = round(sum(subject_values) / len(subject_values), 2)
+                else:
+                    overall_averages['subjects'][subject] = None
+
+            # Format the response
+            response = {
+                'subjects': subjects,
+                'schools': performance_data,
+                'cities': city_averages,
+                'overall': overall_averages
+            }
+            return jsonify(response)
+    except Exception as e:
+        logger.error(f"Error getting school subject performance data: {e}")
+        return jsonify({"error": f"Failed to fetch chart data: {str(e)}"}), 500
