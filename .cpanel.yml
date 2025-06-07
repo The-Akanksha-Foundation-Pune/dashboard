@@ -1,0 +1,15 @@
+---
+deployment:
+  tasks:
+    - export FLASK_APP=app.py
+    - export FLASK_ENV=production
+    - python3.10 -m venv venv
+    - source venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    # If you use Flask-Migrate for database migrations, uncomment the next line:
+    # - flask db upgrade || true
+    # To run your app with Flask's built-in server (recommended for cPanel):
+    - flask run --host=0.0.0.0 --port=5000
+    # Or, if you use python app.py as your entry point, comment the above and uncomment below:
+    # - python app.py 
