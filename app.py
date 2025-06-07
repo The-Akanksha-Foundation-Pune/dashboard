@@ -280,4 +280,4 @@ if __name__ == "__main__":
 
     # Run without SSL for local development
     # Note: For production, use a proper WSGI server with SSL termination
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=5000)
