@@ -57,54 +57,72 @@
         </div>
         <div class="col-md-2 mb-2">
             <select class="form-select" id="filter-academic-year"><option value="All">All Academic Years</option></select>
-    </div>
+        </div>
         <div class="col-md-2 mb-2">
             <select class="form-select" id="filter-assessment-type"><option value="All">All Assessment Types</option></select>
-                </div>
-        <div class="col-md-2 mb-2">
-            <select class="form-select" id="filter-school"><option value="All">All Schools</option></select>
-            </div>
-        <div class="col-md-2 mb-2">
-            <select class="form-select" id="filter-grade"><option value="All">All Grades</option></select>
-                </div>
+        </div>
         <div class="col-md-2 mb-2">
             <select class="form-select" id="filter-subject"><option value="All">All Subjects</option></select>
-            </div>
-        <div class="col-md-2 mb-2">
-            <select class="form-select" id="filter-gender">
-                <option value="All">All Genders</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                    </select>
-                </div>
-            </div>
-    <div class="dashboard-card">
-                <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold">School vs Grade Pivot Table (Average %)</h6>
-                </div>
-                <div class="card-body">
-            <div id="pivot-loading">
-                <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-            <div class="pivot-table-container" id="pivot-table-container" style="display:none;"></div>
         </div>
     </div>
-    <!-- New School vs Subject Pivot Table Card -->
-    <div class="dashboard-card">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold">School vs Subject Pivot Table (Average %)</h6>
+    <!-- Pills for Pivot Tables -->
+    <ul class="nav nav-pills mb-3" id="assessmentPivotTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="school-grade-tab" data-bs-toggle="pill" data-bs-target="#school-grade" type="button" role="tab" aria-controls="school-grade" aria-selected="true">School vs Grade</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="school-subject-tab" data-bs-toggle="pill" data-bs-target="#school-subject" type="button" role="tab" aria-controls="school-subject" aria-selected="false">School vs Subject</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="bucket-tab" data-bs-toggle="pill" data-bs-target="#bucket" type="button" role="tab" aria-controls="bucket" aria-selected="false">Bucket</button>
+      </li>
+    </ul>
+    <div class="tab-content" id="assessmentPivotTabContent">
+      <div class="tab-pane fade show active" id="school-grade" role="tabpanel" aria-labelledby="school-grade-tab">
+        <div class="dashboard-card">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold">School vs Grade Pivot Table (Average %)</h6>
+          </div>
+          <div class="card-body">
+            <div id="pivot-loading">
+              <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <div class="pivot-table-container" id="pivot-table-container" style="display:none;"></div>
+          </div>
         </div>
-        <div class="card-body">
+      </div>
+      <div class="tab-pane fade" id="school-subject" role="tabpanel" aria-labelledby="school-subject-tab">
+        <div class="dashboard-card">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold">School vs Subject Pivot Table (Average %)</h6>
+          </div>
+          <div class="card-body">
             <div id="subject-pivot-loading" style="display:none;">
-                <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+              <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>
             <div class="pivot-table-container" id="subject-pivot-table-container" style="display:none;"></div>
+          </div>
         </div>
+      </div>
+      <div class="tab-pane fade" id="bucket" role="tabpanel" aria-labelledby="bucket-tab">
+        <div class="dashboard-card">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold">Bucket-wise Students Nos. (Based on Avg. Scores)</h6>
+          </div>
+          <div class="card-body">
+            <div id="bucket-loading" style="display:none;">
+              <div class="spinner-border text-primary" style="width:2.5rem;height:2.5rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <div id="bucket-bar-container"></div>
+          </div>
+        </div>
+      </div>
     </div>
 </div>
 {% endblock %}
@@ -116,10 +134,7 @@ let filterOptions = {
     city: 'All',
     academic_year: 'All',
     assessment_type: 'All',
-    school: 'All',
-    grade: 'All',
     subject: 'All',
-    gender: 'All',
     start_date: null,
     end_date: null
 };
@@ -128,6 +143,21 @@ function getBucketClass(val) {
     if (val > 60) return 'bg-bucket-green';
     if (val >= 35) return 'bg-bucket-blue';
     return 'bg-bucket-red';
+}
+function getOrderedSubjects(subjects) {
+    const mainOrder = ["English", "Math", "Hindi", "Marathi", "Science", "Computer"];
+    const lowerMap = {};
+    subjects.forEach(s => { lowerMap[s.toLowerCase()] = s; });
+    // Build ordered list: mainOrder (if present), then extras alpha
+    const ordered = [];
+    mainOrder.forEach(subj => {
+        const found = subjects.find(s => s.toLowerCase() === subj.toLowerCase());
+        if (found) ordered.push(found);
+    });
+    // Add extras not in mainOrder
+    const extras = subjects.filter(s => !mainOrder.some(m => m.toLowerCase() === s.toLowerCase()));
+    extras.sort();
+    return [...ordered, ...extras];
 }
 function renderPivotTable(data) {
         const grades = data.grades;
@@ -228,47 +258,28 @@ function populateSecondaryFilters() {
     })
         .then(r => r.json())
         .then(data => {
-            // Schools
-            const schoolSel = document.getElementById('filter-school');
-            schoolSel.innerHTML = '<option value="All">All Schools</option>' + data.schools.map(s => `<option value="${s}">${s}</option>`).join('');
-            // Grades
-            const gradeSel = document.getElementById('filter-grade');
-            gradeSel.innerHTML = '<option value="All">All Grades</option>' + data.grades.map(g => `<option value="${g}">${g}</option>`).join('');
-            // Subjects
+            // Subjects (ordered)
             const subjectSel = document.getElementById('filter-subject');
-            subjectSel.innerHTML = '<option value="All">All Subjects</option>' + data.subjects.map(su => `<option value="${su}">${su}</option>`).join('');
+            const orderedSubjects = getOrderedSubjects(data.subjects);
+            subjectSel.innerHTML = '<option value="All">All Subjects</option>' + orderedSubjects.map(su => `<option value="${su}">${su}</option>`).join('');
         });
 }
 function onPrimaryFilterChange() {
-    // Update filterOptions and reload secondary filters
     filterOptions.academic_year = document.getElementById('filter-academic-year').value;
     filterOptions.assessment_type = document.getElementById('filter-assessment-type').value;
     populateSecondaryFilters();
-    // Reset secondary filters to 'All'
-    filterOptions.school = 'All';
-    filterOptions.grade = 'All';
-    filterOptions.subject = 'All';
-    document.getElementById('filter-school').value = 'All';
-    document.getElementById('filter-grade').value = 'All';
-    document.getElementById('filter-subject').value = 'All';
-    loadPivotTable();
+    reloadActivePivotTable();
 }
 function onSecondaryFilterChange() {
-    filterOptions.school = document.getElementById('filter-school').value;
-    filterOptions.grade = document.getElementById('filter-grade').value;
     filterOptions.subject = document.getElementById('filter-subject').value;
-    loadPivotTable();
-}
-function onGenderFilterChange() {
-    filterOptions.gender = document.getElementById('filter-gender').value;
-    loadPivotTable();
+    reloadActivePivotTable();
 }
 function onCityFilterChange() {
     filterOptions.city = document.getElementById('filter-city').value;
-    loadPivotTable();
+    reloadActivePivotTable();
 }
 function renderSubjectPivotTable(data) {
-    const subjects = data.subjects;
+    const subjects = getOrderedSubjects(data.subjects);
     const schools = Object.keys(data.schools);
     const overall = data.overall.subjects;
     let html = '<table class="pivot-table"><thead><tr><th>School</th>';
@@ -320,10 +331,17 @@ function renderSubjectPivotTable(data) {
 function loadSubjectPivotTable() {
     document.getElementById('subject-pivot-loading').style.display = 'flex';
     document.getElementById('subject-pivot-table-container').style.display = 'none';
+    
+    // Create a copy of filterOptions and add exclude_grades for this specific view
+    const subjectFilters = {
+        ...filterOptions,
+        exclude_grades: ['9', '10']
+    };
+    
     fetch('/assessment/chart/school_subject_performance', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(filterOptions)
+        body:JSON.stringify(subjectFilters)
     })
         .then(r => r.json())
         .then(data => {
@@ -335,15 +353,171 @@ function loadSubjectPivotTable() {
             document.getElementById('subject-pivot-loading').innerHTML = '<div class="text-danger">Failed to load data.</div>';
         });
 }
+function renderBucketBarChart(data) {
+    // Sort schools alphabetically
+    data.sort((a, b) => a.school.localeCompare(b.school));
+    const schools = data.map(d => d.school);
+    const green = data.map(d => d.green);
+    const blue = data.map(d => d.blue);
+    const red = data.map(d => d.red);
+    const greenCount = data.map(d => d.green_count);
+    const blueCount = data.map(d => d.blue_count);
+    const redCount = data.map(d => d.red_count);
+    // Initial traces with zero values for animation
+    const zeroTraces = [
+        {
+            x: green.map(() => 0),
+            y: schools,
+            name: 'Green',
+            orientation: 'h',
+            type: 'bar',
+            marker: {color: '#28a745'},
+            text: green.map(v => v ? v + '%' : ''),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            customdata: greenCount,
+        },
+        {
+            x: blue.map(() => 0),
+            y: schools,
+            name: 'Blue',
+            orientation: 'h',
+            type: 'bar',
+            marker: {color: '#2596be'},
+            text: blue.map(v => v ? v + '%' : ''),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            customdata: blueCount,
+        },
+        {
+            x: red.map(() => 0),
+            y: schools,
+            name: 'Red',
+            orientation: 'h',
+            type: 'bar',
+            marker: {color: '#dc3545'},
+            text: red.map(v => v ? v + '%' : ''),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            customdata: redCount,
+        }
+    ];
+    const traces = [
+        {
+            x: green,
+            y: schools,
+            name: 'Green',
+            orientation: 'h',
+            type: 'bar',
+            marker: {color: '#28a745'},
+            text: green.map(v => v ? v + '%' : ''),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            customdata: greenCount,
+        },
+        {
+            x: blue,
+            y: schools,
+            name: 'Blue',
+            orientation: 'h',
+            type: 'bar',
+            marker: {color: '#2596be'},
+            text: blue.map(v => v ? v + '%' : ''),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            customdata: blueCount,
+        },
+        {
+            x: red,
+            y: schools,
+            name: 'Red',
+            orientation: 'h',
+            type: 'bar',
+            marker: {color: '#dc3545'},
+            text: red.map(v => v ? v + '%' : ''),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            customdata: redCount,
+        }
+    ];
+    const layout = {
+        barmode: 'stack',
+        title: false,
+        xaxis: {title: '% of Students', range: [0, 100]},
+        yaxis: {autorange: 'reversed'},
+        height: 60 * schools.length + 100,
+        margin: {l: 120, r: 30, t: 30, b: 50},
+        legend: {orientation: 'h', x: 0.5, xanchor: 'center', y: -0.2},
+    };
+    Plotly.newPlot('bucket-bar-container', zeroTraces, layout, {responsive: true})
+        .then(function() {
+            Plotly.animate('bucket-bar-container', {
+                data: traces
+            }, {
+                transition: {
+                    duration: 900,
+                    easing: 'cubic-in-out'
+                },
+                frame: {
+                    duration: 700,
+                    redraw: false
+                }
+            });
+        });
+}
+
+function loadBucketBarChart() {
+    document.getElementById('bucket-loading').style.display = '';
+    document.getElementById('bucket-bar-container').innerHTML = '';
+    
+    // Create a copy of filterOptions and add exclude_grades for this specific view
+    const bucketFilters = {
+        ...filterOptions,
+        exclude_grades: ['9', '10']
+    };
+    
+    fetch('/assessment/chart/bucket_wise', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(bucketFilters)
+    })
+    .then(r => r.json())
+    .then(data => {
+        renderBucketBarChart(data);
+        document.getElementById('bucket-loading').style.display = 'none';
+    })
+    .catch(() => {
+        document.getElementById('bucket-loading').innerHTML = '<div class="text-danger">Failed to load data.</div>';
+    });
+}
+
+function reloadActivePivotTable() {
+    if (document.getElementById('school-grade').classList.contains('active')) {
+        loadPivotTable();
+    } else if (document.getElementById('school-subject').classList.contains('active')) {
+        loadSubjectPivotTable();
+    } else if (document.getElementById('bucket').classList.contains('active')) {
+        loadBucketBarChart();
+    }
+}
 document.addEventListener('DOMContentLoaded', function() {
     populatePrimaryFilters();
     document.getElementById('filter-city').addEventListener('change', onCityFilterChange);
-    document.getElementById('filter-school').addEventListener('change', onSecondaryFilterChange);
-    document.getElementById('filter-grade').addEventListener('change', onSecondaryFilterChange);
+    document.getElementById('filter-academic-year').addEventListener('change', onPrimaryFilterChange);
+    document.getElementById('filter-assessment-type').addEventListener('change', onPrimaryFilterChange);
     document.getElementById('filter-subject').addEventListener('change', onSecondaryFilterChange);
-    document.getElementById('filter-gender').addEventListener('change', onGenderFilterChange);
+    // Only load the first table initially
     loadPivotTable();
-    loadSubjectPivotTable();
+    // Tab event listeners
+    document.getElementById('school-grade-tab').addEventListener('shown.bs.tab', function() {
+      loadPivotTable();
+    });
+    document.getElementById('school-subject-tab').addEventListener('shown.bs.tab', function() {
+      loadSubjectPivotTable();
+    });
+    document.getElementById('bucket-tab').addEventListener('shown.bs.tab', function (e) {
+        loadBucketBarChart();
+    });
 });
 </script>
 {% endblock %}

@@ -87,6 +87,7 @@ def get_consolidated_performance_chart():
 
         # Build filter conditions
         conditions = build_filter_conditions(filters)
+        city = filters.get('city', 'All')
 
         # Use our custom session scope
         with session_scope() as session:
@@ -96,7 +97,11 @@ def get_consolidated_performance_chart():
                 StudentAssessmentData.grade_name,
                 func.sum(StudentAssessmentData.obtained_marks),
                 func.sum(StudentAssessmentData.max_marks)
-            ).filter(
+            )
+            if city != 'All':
+                query = query.join(City, StudentAssessmentData.school_name == City.school_name)
+                query = query.filter(City.city == city)
+            query = query.filter(
                 *conditions,
                 StudentAssessmentData.school_name.isnot(None),
                 StudentAssessmentData.grade_name.isnot(None),
@@ -1132,6 +1137,7 @@ def get_school_subject_performance():
 
         # Build filter conditions
         conditions = build_filter_conditions(filters)
+        city = filters.get('city', 'All')
 
         # Use our custom session scope
         with session_scope() as session:
@@ -1141,7 +1147,11 @@ def get_school_subject_performance():
                 StudentAssessmentData.subject_name,
                 func.sum(StudentAssessmentData.obtained_marks),
                 func.sum(StudentAssessmentData.max_marks)
-            ).filter(
+            )
+            if city != 'All':
+                query = query.join(City, StudentAssessmentData.school_name == City.school_name)
+                query = query.filter(City.city == city)
+            query = query.filter(
                 *conditions,
                 StudentAssessmentData.school_name.isnot(None),
                 StudentAssessmentData.subject_name.isnot(None),
@@ -1258,3 +1268,89 @@ def get_school_subject_performance():
     except Exception as e:
         logger.error(f"Error getting school subject performance data: {e}")
         return jsonify({"error": f"Failed to fetch chart data: {str(e)}"}), 500
+
+@assessment_bp.route('/chart/bucket_wise', methods=['POST'])
+def get_bucket_wise_chart():
+    """Get bucket-wise student % and unique student counts for each school (for stacked bar chart)."""
+    try:
+        filters = request.get_json()
+        if not filters:
+            return jsonify({"error": "Missing filter data"}), 400
+
+        # Build filter conditions
+        conditions = build_filter_conditions(filters)
+        city = filters.get('city', 'All')
+
+        with session_scope() as session:
+            # Query all students with their total obtained and max marks per school
+            query = session.query(
+                StudentAssessmentData.school_name,
+                StudentAssessmentData.student_id,
+                func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
+                func.sum(StudentAssessmentData.max_marks).label('maximum')
+            )
+            if city != 'All':
+                query = query.join(City, StudentAssessmentData.school_name == City.school_name)
+                query = query.filter(City.city == city)
+            query = query.filter(
+                *conditions,
+                StudentAssessmentData.school_name.isnot(None),
+                StudentAssessmentData.student_id.isnot(None),
+                StudentAssessmentData.obtained_marks.isnot(None),
+                StudentAssessmentData.max_marks.isnot(None),
+                StudentAssessmentData.max_marks > 0
+            ).group_by(
+                StudentAssessmentData.school_name,
+                StudentAssessmentData.student_id
+            )
+
+            results = query.all()
+
+            # Organize by school
+            school_students = {}
+            for school, student_id, obtained, maximum in results:
+                if not school or not student_id or not maximum:
+                    continue
+                percent = (obtained / maximum) * 100 if maximum > 0 else None
+                if school not in school_students:
+                    school_students[school] = []
+                school_students[school].append((student_id, percent))
+
+            # Calculate bucket % and unique counts for each school
+            bucket_data = []
+            for school, student_percents in school_students.items():
+                green_ids = set()
+                blue_ids = set()
+                red_ids = set()
+                for student_id, percent in student_percents:
+                    if percent is None:
+                        continue
+                    if percent > 60:
+                        green_ids.add(student_id)
+                    elif percent >= 35:
+                        blue_ids.add(student_id)
+                    else:
+                        red_ids.add(student_id)
+                total = len(set([sid for sid, p in student_percents if p is not None]))
+                if total == 0:
+                    continue
+                green = len(green_ids)
+                blue = len(blue_ids)
+                red = len(red_ids)
+                bucket_data.append({
+                    'school': school,
+                    'green': round(green / total * 100, 2),
+                    'green_count': green,
+                    'blue': round(blue / total * 100, 2),
+                    'blue_count': blue,
+                    'red': round(red / total * 100, 2),
+                    'red_count': red
+                })
+
+            # Sort by green % descending
+            bucket_data.sort(key=lambda x: x['green'], reverse=True)
+
+        return jsonify(bucket_data)
+    except Exception as e:
+        logger.error(f"Error getting bucket-wise chart data: {e}")
+        return jsonify({"error": f"Failed to fetch bucket-wise chart data: {str(e)}"}), 500
