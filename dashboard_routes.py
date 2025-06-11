@@ -407,15 +407,11 @@ def kaleidoscope_data():
     grade = request.args.get('grade')
     division = request.args.get('division')
 
+    from sqlalchemy import func
     query = db.session.query(
         StudentAssessmentData.competency_level_name,
-        StudentAssessmentData.obtained_marks,
-        StudentAssessmentData.max_marks,
-        StudentAssessmentData.subject_name,
-        StudentAssessmentData.grade_name,
-        StudentAssessmentData.division_name,
-        StudentAssessmentData.assessment_type,
-        StudentAssessmentData.academic_year
+        func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
+        func.sum(StudentAssessmentData.max_marks).label('max')
     )
     if assessment_type:
         query = query.filter(StudentAssessmentData.assessment_type == assessment_type)
@@ -430,21 +426,45 @@ def kaleidoscope_data():
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
 
+    query = query.group_by(StudentAssessmentData.competency_level_name)
+    # Add FORCE INDEX hint for MySQL
+    query = query.with_hint(
+        StudentAssessmentData,
+        'FORCE INDEX (idx_sad_dashboard_filters)',
+        dialect_name='mysql'
+    )
     results = query.all()
+    # Also compute overall sums for the same filters
+    overall_query = db.session.query(
+        func.sum(StudentAssessmentData.obtained_marks).label('overall_obtained'),
+        func.sum(StudentAssessmentData.max_marks).label('overall_max')
+    )
+    if assessment_type:
+        overall_query = overall_query.filter(StudentAssessmentData.assessment_type == assessment_type)
+    if academic_year:
+        overall_query = overall_query.filter(StudentAssessmentData.academic_year == academic_year)
+    if subject:
+        overall_query = overall_query.filter(StudentAssessmentData.subject_name == subject)
+    if school:
+        overall_query = overall_query.filter(StudentAssessmentData.school_name == school)
+    if grade:
+        overall_query = overall_query.filter(StudentAssessmentData.grade_name == grade)
+    if division:
+        overall_query = overall_query.filter(StudentAssessmentData.division_name == division)
+    overall = overall_query.one()
     data = [
         {
             'competency_level_name': r.competency_level_name,
-            'obtained_marks': r.obtained_marks,
-            'max_marks': r.max_marks,
-            'subject_name': r.subject_name,
-            'grade_name': r.grade_name,
-            'division_name': r.division_name,
-            'assessment_type': r.assessment_type,
-            'academic_year': r.academic_year
+            'obtained': r.obtained or 0,
+            'max': r.max or 0
         }
-        for r in results
+        for r in results if r.competency_level_name is not None
     ]
-    return jsonify(data)
+    return jsonify({
+        'competencies': data,
+        'overall_obtained': overall.overall_obtained or 0,
+        'overall_max': overall.overall_max or 0
+    })
 
 @dashboard_bp.route('/kaleidoscope/bucket_data', methods=['GET'])
 def kaleidoscope_bucket_data():
@@ -456,12 +476,14 @@ def kaleidoscope_bucket_data():
     grade = request.args.get('grade')
     division = request.args.get('division')
 
+    from sqlalchemy import func
     query = db.session.query(
-        StudentAssessmentData.student_id,
         StudentAssessmentData.competency_level_name,
-        StudentAssessmentData.obtained_marks,
-        StudentAssessmentData.max_marks
+        StudentAssessmentData.student_id,
+        func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
+        func.sum(StudentAssessmentData.max_marks).label('max')
     )
+    # Apply filters
     if assessment_type:
         query = query.filter(StudentAssessmentData.assessment_type == assessment_type)
     if academic_year:
@@ -474,57 +496,55 @@ def kaleidoscope_bucket_data():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    # Use FORCE INDEX for MySQL
+    query = query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
+    query = query.group_by(StudentAssessmentData.competency_level_name, StudentAssessmentData.student_id)
 
-    # Structure: {competency: {student_id: {'obtained': x, 'max': y}}}
+    # Build per-competency buckets
     comp_student_totals = {}
     overall_student_totals = {}
     for row in query:
-        if not row.student_id or not row.competency_level_name:
-            continue
-        # Per-competency
         comp = row.competency_level_name
+        sid = row.student_id
+        if not sid or not comp:
+            continue
         if comp not in comp_student_totals:
             comp_student_totals[comp] = {}
-        if row.student_id not in comp_student_totals[comp]:
-            comp_student_totals[comp][row.student_id] = {'obtained': 0, 'max': 0}
-        comp_student_totals[comp][row.student_id]['obtained'] += row.obtained_marks or 0
-        comp_student_totals[comp][row.student_id]['max'] += row.max_marks or 0
+        comp_student_totals[comp][sid] = {'obtained': row.obtained or 0, 'max': row.max or 0}
         # Overall
-        if row.student_id not in overall_student_totals:
-            overall_student_totals[row.student_id] = {'obtained': 0, 'max': 0}
-        overall_student_totals[row.student_id]['obtained'] += row.obtained_marks or 0
-        overall_student_totals[row.student_id]['max'] += row.max_marks or 0
+        if sid not in overall_student_totals:
+            overall_student_totals[sid] = {'obtained': 0, 'max': 0}
+        overall_student_totals[sid]['obtained'] += row.obtained or 0
+        overall_student_totals[sid]['max'] += row.max or 0
 
     # For each competency, count unique students in each bucket
     competencies = sorted(comp_student_totals.keys())
     bucket_names = ['Red', 'Blue', 'Green']
     bucket_counts = {b: [] for b in bucket_names}
     for comp in competencies:
-        # Use a set to ensure unique student IDs per bucket
         bucket_students = {'Red': set(), 'Blue': set(), 'Green': set()}
-        for student_id, totals in comp_student_totals[comp].items():
+        for sid, totals in comp_student_totals[comp].items():
             if totals['max'] > 0:
                 percent = (totals['obtained'] / totals['max']) * 100
                 if percent > 60:
-                    bucket_students['Green'].add(student_id)
+                    bucket_students['Green'].add(sid)
                 elif percent >= 35:
-                    bucket_students['Blue'].add(student_id)
+                    bucket_students['Blue'].add(sid)
                 else:
-                    bucket_students['Red'].add(student_id)
+                    bucket_students['Red'].add(sid)
         for b in bucket_names:
             bucket_counts[b].append(len(bucket_students[b]))
-
     # Overall bucket counts (unique students)
     overall_bucket_students = {'Red': set(), 'Blue': set(), 'Green': set()}
-    for student_id, totals in overall_student_totals.items():
+    for sid, totals in overall_student_totals.items():
         if totals['max'] > 0:
             percent = (totals['obtained'] / totals['max']) * 100
             if percent > 60:
-                overall_bucket_students['Green'].add(student_id)
+                overall_bucket_students['Green'].add(sid)
             elif percent >= 35:
-                overall_bucket_students['Blue'].add(student_id)
+                overall_bucket_students['Blue'].add(sid)
             else:
-                overall_bucket_students['Red'].add(student_id)
+                overall_bucket_students['Red'].add(sid)
     for b in bucket_names:
         bucket_counts[b].append(len(overall_bucket_students[b]))
     competencies_with_overall = competencies + ['Overall']
@@ -545,12 +565,13 @@ def kaleidoscope_sorted_list():
     grade = request.args.get('grade')
     division = request.args.get('division')
 
+    from sqlalchemy import func
     query = db.session.query(
+        StudentAssessmentData.competency_level_name,
         StudentAssessmentData.student_id,
         StudentAssessmentData.student_name,
-        StudentAssessmentData.competency_level_name,
-        StudentAssessmentData.obtained_marks,
-        StudentAssessmentData.max_marks
+        func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
+        func.sum(StudentAssessmentData.max_marks).label('max')
     )
     if assessment_type:
         query = query.filter(StudentAssessmentData.assessment_type == assessment_type)
@@ -564,33 +585,36 @@ def kaleidoscope_sorted_list():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    # Use FORCE INDEX for MySQL
+    query = query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
+    query = query.group_by(StudentAssessmentData.competency_level_name, StudentAssessmentData.student_id, StudentAssessmentData.student_name)
+    results = query.all()
 
     # Structure: {competency: {student_id: {'name': ..., 'obtained': x, 'max': y}}}
     comp_student_totals = {}
     overall_student_totals = {}
     student_names = {}
-    for row in query:
-        if not row.student_id:
-            continue
+    for row in results:
         comp = row.competency_level_name or 'Unknown'
+        sid = row.student_id
+        sname = row.student_name
+        if not sid:
+            continue
         if comp not in comp_student_totals:
             comp_student_totals[comp] = {}
-        if row.student_id not in comp_student_totals[comp]:
-            comp_student_totals[comp][row.student_id] = {'obtained': 0, 'max': 0}
-            student_names[row.student_id] = row.student_name
-        comp_student_totals[comp][row.student_id]['obtained'] += row.obtained_marks or 0
-        comp_student_totals[comp][row.student_id]['max'] += row.max_marks or 0
+        comp_student_totals[comp][sid] = {'name': sname, 'obtained': row.obtained or 0, 'max': row.max or 0}
+        student_names[sid] = sname
         # Overall
-        if row.student_id not in overall_student_totals:
-            overall_student_totals[row.student_id] = {'obtained': 0, 'max': 0}
-        overall_student_totals[row.student_id]['obtained'] += row.obtained_marks or 0
-        overall_student_totals[row.student_id]['max'] += row.max_marks or 0
+        if sid not in overall_student_totals:
+            overall_student_totals[sid] = {'obtained': 0, 'max': 0}
+        overall_student_totals[sid]['obtained'] += row.obtained or 0
+        overall_student_totals[sid]['max'] += row.max or 0
 
     # For each competency, build sorted list
     result = {}
     for comp in sorted(comp_student_totals.keys()):
         students = []
-        for student_id, totals in comp_student_totals[comp].items():
+        for sid, totals in comp_student_totals[comp].items():
             if totals['max'] > 0:
                 avg = (totals['obtained'] / totals['max']) * 100
                 if avg > 60:
@@ -600,7 +624,7 @@ def kaleidoscope_sorted_list():
                 else:
                     bucket = 'Red'
                 students.append({
-                    'student_name': student_names[student_id],
+                    'student_name': totals['name'],
                     'average': round(avg, 2),
                     'bucket': bucket
                 })
@@ -608,7 +632,7 @@ def kaleidoscope_sorted_list():
         result[comp] = students
     # Overall
     overall_students = []
-    for student_id, totals in overall_student_totals.items():
+    for sid, totals in overall_student_totals.items():
         if totals['max'] > 0:
             avg = (totals['obtained'] / totals['max']) * 100
             if avg > 60:
@@ -618,7 +642,7 @@ def kaleidoscope_sorted_list():
             else:
                 bucket = 'Red'
             overall_students.append({
-                'student_name': student_names.get(student_id, ''),
+                'student_name': student_names.get(sid, ''),
                 'average': round(avg, 2),
                 'bucket': bucket
             })
@@ -631,16 +655,17 @@ def kaleidoscope_average_table():
     """Return a table of average scores: rows=grades, columns=subjects, cells=average percentage for that grade+subject."""
     assessment_type = request.args.get('assessment_type')
     academic_year = request.args.get('academic_year')
-    subject = request.args.get('subject')
+    subject = request.args.get('subject')  # Will not be used for filtering
     school = request.args.get('school')
     grade = request.args.get('grade')
     division = request.args.get('division')
 
+    from sqlalchemy import func
     query = db.session.query(
         StudentAssessmentData.grade_name,
         StudentAssessmentData.subject_name,
-        StudentAssessmentData.obtained_marks,
-        StudentAssessmentData.max_marks
+        func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
+        func.sum(StudentAssessmentData.max_marks).label('max')
     )
     if assessment_type:
         query = query.filter(StudentAssessmentData.assessment_type == assessment_type)
@@ -648,21 +673,27 @@ def kaleidoscope_average_table():
         query = query.filter(StudentAssessmentData.academic_year == academic_year)
     if school:
         query = query.filter(StudentAssessmentData.school_name == school)
+    # Do NOT filter by subject here
+    if grade:
+        query = query.filter(StudentAssessmentData.grade_name == grade)
+    if division:
+        query = query.filter(StudentAssessmentData.division_name == division)
+    # Use FORCE INDEX for MySQL
+    query = query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
+    query = query.group_by(StudentAssessmentData.grade_name, StudentAssessmentData.subject_name)
+    results = query.all()
 
-    # Aggregate sums for each (grade, subject)
+    # Build table from SQL results
     table = {}
     grades_set = set()
     subjects_set = set()
-    for row in query:
+    for row in results:
         if not row.grade_name or not row.subject_name:
             continue
         grades_set.add(row.grade_name)
         subjects_set.add(row.subject_name)
         key = (row.grade_name, row.subject_name)
-        if key not in table:
-            table[key] = {'obtained': 0, 'max': 0}
-        table[key]['obtained'] += row.obtained_marks or 0
-        table[key]['max'] += row.max_marks or 0
+        table[key] = {'obtained': row.obtained or 0, 'max': row.max or 0}
 
     # Define desired order
     SUBJECT_ORDER = ['English', 'Math', 'Hindi', 'Marathi', 'Science', 'Computer']
@@ -672,16 +703,12 @@ def kaleidoscope_average_table():
         'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10',
         'Grade 11', 'Grade 12'
     ]
-    # Only include grades/subjects present in the data, in the specified order
     grades = [g for g in GRADE_ORDER if g in grades_set]
-    # Add any grades not in the order at the end (sorted)
     grades += sorted([g for g in grades_set if g not in GRADE_ORDER])
     subjects = [s for s in SUBJECT_ORDER if s in subjects_set]
-    # Add any subjects not in the order at the end (sorted)
     subjects += sorted([s for s in subjects_set if s not in SUBJECT_ORDER])
 
     data = {g: {} for g in grades}
-    # Calculate per-grade, per-subject averages
     for g in grades:
         for s in subjects:
             key = (g, s)
@@ -718,9 +745,7 @@ def kaleidoscope_average_table():
                 total += data[g][s]
                 count += 1
     overall_row['Overall'] = round(total / count, 2) if count > 0 else None
-    # Add Overall row to data
     data['Overall'] = overall_row
-    # Add 'Overall' to subjects and grades at the end
     subjects_with_overall = subjects + ['Overall']
     grades_with_overall = grades + ['Overall']
     return jsonify({'grades': grades_with_overall, 'subjects': subjects_with_overall, 'data': data})
@@ -748,6 +773,7 @@ def kaleidoscope_portfolio_data():
     student_id = request.args.get('student_id')
     if not student_id:
         return jsonify({'error': 'Missing student_id'}), 400
+    from sqlalchemy import func
     # Subject-wise averages for all assessment types (standardized)
     std_query = db.session.query(
         StudentAssessmentData.subject_name,
@@ -756,6 +782,7 @@ def kaleidoscope_portfolio_data():
         func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
         func.sum(StudentAssessmentData.max_marks).label('max')
     ).filter(StudentAssessmentData.student_id == student_id)
+    std_query = std_query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
     std_query = std_query.group_by(StudentAssessmentData.subject_name, StudentAssessmentData.assessment_type, StudentAssessmentData.academic_year)
     std_results = std_query.all()
     # Subject-wise averages for all assessment types (non-standardized)
@@ -789,6 +816,7 @@ def kaleidoscope_portfolio_data():
         for r in att_results
     ]
     # Combine standardized and non-standardized, group by (subject, assessment_type, academic_year)
+    from collections import defaultdict
     combined = defaultdict(lambda: {'obtained': 0, 'max': 0})
     for r in std_results:
         key = (r.subject_name, r.assessment_type, r.academic_year)
@@ -818,6 +846,7 @@ def kaleidoscope_portfolio_data():
         func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
         func.sum(StudentAssessmentData.max_marks).label('max')
     ).filter(StudentAssessmentData.student_id == student_id)
+    std_comp_query = std_comp_query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
     std_comp_query = std_comp_query.group_by(StudentAssessmentData.subject_name, StudentAssessmentData.competency_level_name, StudentAssessmentData.academic_year, StudentAssessmentData.assessment_type)
     for r in std_comp_query:
         if r.subject_name and r.competency_level_name and r.academic_year and r.assessment_type:
@@ -870,6 +899,7 @@ def kaleidoscope_portfolio_data():
         func.sum(StudentAssessmentData.obtained_marks).label('obtained'),
         func.sum(StudentAssessmentData.max_marks).label('max')
     ).filter(StudentAssessmentData.student_id == student_id)
+    std_prog_query = std_prog_query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
     std_prog_query = std_prog_query.group_by(StudentAssessmentData.subject_name, StudentAssessmentData.competency_level_name, StudentAssessmentData.academic_year, StudentAssessmentData.assessment_type)
     for r in std_prog_query:
         if r.subject_name and r.competency_level_name and r.academic_year and r.assessment_type:

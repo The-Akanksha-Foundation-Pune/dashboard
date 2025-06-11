@@ -27,6 +27,9 @@ class UserRole(db.Model):
 class City(db.Model):
     """City information linked to schools."""
     __tablename__ = 'city'
+    __table_args__ = (
+        db.Index('idx_city_city', 'city'),
+    )
 
     school_name = db.Column(db.String(50), primary_key=True, nullable=True)
     city = db.Column(db.String(50), nullable=True)
@@ -38,6 +41,12 @@ class City(db.Model):
 class ActiveStudentData(db.Model):
     """Student information."""
     __tablename__ = 'active_student_data'
+    __table_args__ = (
+        db.Index('idx_asd_school_name', 'school_name'),
+        db.Index('idx_asd_academic_year', 'academic_year'),
+        db.Index('idx_asd_gender', 'gender'),
+        db.Index('idx_asd_school_year_gender', 'school_name', 'academic_year', 'gender'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     school_name = db.Column(db.String(255), nullable=False)
@@ -234,6 +243,19 @@ class Program(db.Model):
 class StudentAssessmentData(db.Model):
     """Standardized student assessment data."""
     __tablename__ = 'student_assessment_data'
+    __table_args__ = (
+        db.Index('idx_sad_dashboard_filters',
+            'assessment_type',
+            'academic_year',
+            'subject_name',
+            'school_name',
+            'grade_name',
+            'division_name'
+        ),
+        db.Index('idx_sad_student_id', 'student_id'),
+        db.Index('idx_sad_competency_level', 'competency_level_name'),
+        db.Index('idx_sad_student_name', 'student_name'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     obtained_marks = db.Column(db.Float, nullable=True)

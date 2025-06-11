@@ -324,6 +324,12 @@
     </ul>
     <div class="tab-content" id="kaleidoscopeTabContent">
         <div class="tab-pane fade show active" id="competency" role="tabpanel">
+            <div class="d-flex justify-content-end mb-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="toggle-average-order">
+                    <label class="form-check-label" for="toggle-average-order">Average Order</label>
+                </div>
+            </div>
             <div class="table-responsive"><div id="competency-chart" style="height:400px; width:100%"></div></div>
             <div id="competency-placeholder" class="text-muted mt-3">(Competency chart will appear here based on selected filters.)</div>
             <div id="competency-trend-description" class="alert alert-info mt-3" style="display:none;"></div>
@@ -387,6 +393,16 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script>
 // --- Competency Tab ---
+let averageOrder = false;
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('toggle-average-order');
+    if (toggle) {
+        toggle.addEventListener('change', function() {
+            averageOrder = this.checked;
+            fetchCompetencyDataAndRender();
+        });
+    }
+});
 function getFilterParams() {
     return {
         assessment_type: document.getElementById('assessmentType').value,
@@ -420,23 +436,36 @@ function fetchCompetencyDataAndRender() {
     fetch(`/dashboard/kaleidoscope/data?${params.toString()}`)
         .then(response => response.json())
         .then(data => {
-            // Group by competency_level_name and calculate average
+            // Use new backend format: data.competencies (array), data.overall_obtained, data.overall_max
             const compMap = {};
-            let overallObtained = 0, overallMax = 0;
-            data.forEach(row => {
+            let competencies = [];
+            let averages = [];
+            (data.competencies || []).forEach(row => {
                 if (!row.competency_level_name) return;
-                if (!compMap[row.competency_level_name]) {
-                    compMap[row.competency_level_name] = { obtained: 0, max: 0 };
-                }
-                compMap[row.competency_level_name].obtained += row.obtained_marks || 0;
-                compMap[row.competency_level_name].max += row.max_marks || 0;
-                overallObtained += row.obtained_marks || 0;
-                overallMax += row.max_marks || 0;
+                compMap[row.competency_level_name] = {
+                    obtained: row.obtained || 0,
+                    max: row.max || 0
+                };
             });
-            let competencies = Object.keys(compMap).sort();
-            const averages = competencies.map(c => compMap[c].max > 0 ? (compMap[c].obtained / compMap[c].max) * 100 : 0);
-            // Add overall
+            competencies = Object.keys(compMap);
+            averages = competencies.map(c => compMap[c].max > 0 ? (compMap[c].obtained / compMap[c].max) * 100 : 0);
+            // Sort by average if toggle is on
+            if (averageOrder) {
+                const zipped = competencies.map((c, i) => [c, averages[i]]);
+                zipped.sort((a, b) => b[1] - a[1]);
+                competencies = zipped.map(z => z[0]);
+                averages = zipped.map(z => z[1]);
+            } else {
+                // Default: alphabetical
+                const zipped = competencies.map((c, i) => [c, averages[i]]);
+                zipped.sort((a, b) => a[0].localeCompare(b[0]));
+                competencies = zipped.map(z => z[0]);
+                averages = zipped.map(z => z[1]);
+            }
+            // Add overall at the end
             competencies.push('Overall');
+            const overallObtained = data.overall_obtained || 0;
+            const overallMax = data.overall_max || 0;
             averages.push(overallMax > 0 ? (overallObtained / overallMax) * 100 : 0);
             // Use bucket colors
             const barColors = averages.map((avg, i) => getBucketColor(avg, competencies[i] === 'Overall'));
@@ -497,6 +526,12 @@ function fetchBucketDataAndRender() {
         .then(response => response.json())
         .then(buckets => {
             const competencies = buckets.competencies;
+            // Calculate total students per competency
+            const totals = competencies.map((_, i) => buckets.Red[i] + buckets.Blue[i] + buckets.Green[i]);
+            // Calculate percentages for each bucket
+            const redPerc = buckets.Red.map((count, i) => totals[i] ? (count / totals[i] * 100) : 0);
+            const bluePerc = buckets.Blue.map((count, i) => totals[i] ? (count / totals[i] * 100) : 0);
+            const greenPerc = buckets.Green.map((count, i) => totals[i] ? (count / totals[i] * 100) : 0);
             const traces = [
                 {
                     x: competencies,
@@ -506,7 +541,8 @@ function fetchBucketDataAndRender() {
                     marker: {color: '#dc3545'},
                     text: buckets.Red.map(String),
                     textposition: 'auto',
-                    hovertemplate: '%{x}<br>Red: %{y}<extra></extra>'
+                    hovertemplate: '%{x}<br>Red: %{y} students<br>%: %{customdata:.2f}%<extra></extra>',
+                    customdata: redPerc
                 },
                 {
                     x: competencies,
@@ -516,7 +552,8 @@ function fetchBucketDataAndRender() {
                     marker: {color: '#2596be'},
                     text: buckets.Blue.map(String),
                     textposition: 'auto',
-                    hovertemplate: '%{x}<br>Blue: %{y}<extra></extra>'
+                    hovertemplate: '%{x}<br>Blue: %{y} students<br>%: %{customdata:.2f}%<extra></extra>',
+                    customdata: bluePerc
                 },
                 {
                     x: competencies,
@@ -526,7 +563,8 @@ function fetchBucketDataAndRender() {
                     marker: {color: '#28a745'},
                     text: buckets.Green.map(String),
                     textposition: 'auto',
-                    hovertemplate: '%{x}<br>Green: %{y}<extra></extra>'
+                    hovertemplate: '%{x}<br>Green: %{y} students<br>%: %{customdata:.2f}%<extra></extra>',
+                    customdata: greenPerc
                 }
             ];
             const layout = {

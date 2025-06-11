@@ -6,6 +6,7 @@ import os
 import sys
 import pymysql
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,6 +60,63 @@ def execute_sql_file(file_path):
         connection.close()
         print("Database connection closed.")
 
+def create_student_assessment_indexes(engine):
+    with engine.connect() as conn:
+        # Composite index for dashboard filters
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_sad_dashboard_filters
+            ON student_assessment_data (
+                assessment_type,
+                academic_year,
+                subject_name,
+                school_name,
+                grade_name,
+                division_name
+            )
+        """))
+        # Index on student_id
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_sad_student_id
+            ON student_assessment_data (student_id)
+        """))
+        # Index on competency_level_name
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_sad_competency_level
+            ON student_assessment_data (competency_level_name)
+        """))
+        # Index on student_name
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_sad_student_name
+            ON student_assessment_data (student_name)
+        """))
+        print("Indexes created (if not already present).")
+
+def create_demographics_indexes(engine):
+    with engine.connect() as conn:
+        # Indexes for active_student_data
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_asd_school_name
+            ON active_student_data (school_name)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_asd_academic_year
+            ON active_student_data (academic_year)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_asd_gender
+            ON active_student_data (gender)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_asd_school_year_gender
+            ON active_student_data (school_name, academic_year, gender)
+        """))
+        # Index for city table
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_city_city
+            ON city (city)
+        """))
+        print("Demographics indexes created (if not already present).")
+
 def main():
     """Main function."""
     if len(sys.argv) < 2:
@@ -69,4 +127,7 @@ def main():
     execute_sql_file(file_path)
 
 if __name__ == "__main__":
-    main()
+    from app import app, db
+    with app.app_context():
+        create_student_assessment_indexes(db.engine)
+        create_demographics_indexes(db.engine)

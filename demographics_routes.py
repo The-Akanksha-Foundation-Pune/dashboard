@@ -155,80 +155,95 @@ def _generate_demographics_data(filters):
         gender_filter = filters.get('gender', 'All')
         current_app.logger.info(f"Generating demographics data with filters - Year: {academic_year_filter}, City: {city_filter}, Gender: {gender_filter}")
 
-        # Build the SQL query with filters - Use correct table names
-        sql = """
+        # --- Scorecard Query: total, male, female counts ---
+        scorecard_sql = """
             SELECT
-                asd.student_id,
-                asd.school_name,
-                asd.grade_name,
-                asd.gender,
-                c.city
+                COUNT(DISTINCT asd.student_id) AS total,
+                COUNT(DISTINCT CASE WHEN LOWER(asd.gender) = 'm' THEN asd.student_id END) AS male,
+                COUNT(DISTINCT CASE WHEN LOWER(asd.gender) = 'f' THEN asd.student_id END) AS female
             FROM active_student_data asd
             LEFT JOIN city c ON asd.school_name = c.school_name
         """
-        params = []
-        conditions = []
+        scorecard_params = []
+        scorecard_conditions = []
         if academic_year_filter != 'All':
-            conditions.append("asd.academic_year = %s") # Assuming column name is academic_year
-            params.append(academic_year_filter)
+            scorecard_conditions.append("asd.academic_year = %s")
+            scorecard_params.append(academic_year_filter)
         if city_filter != 'All':
-            conditions.append("c.city = %s") # Filter on city table alias
-            params.append(city_filter)
+            scorecard_conditions.append("c.city = %s")
+            scorecard_params.append(city_filter)
         if gender_filter != 'All':
-            conditions.append("asd.gender = %s") # Filter on active_student_data alias
-            params.append(gender_filter)
-
-        if conditions:
-            sql += " WHERE " + " AND ".join(conditions)
-
+            scorecard_conditions.append("asd.gender = %s")
+            scorecard_params.append(gender_filter)
+        if scorecard_conditions:
+            scorecard_sql += " WHERE " + " AND ".join(scorecard_conditions)
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute(sql, params)
-            data = cursor.fetchall()
+            cursor.execute(scorecard_sql, scorecard_params)
+            row = cursor.fetchone()
+            scorecard_data = {
+                'total': row['total'] if row else 0,
+                'male': row['male'] if row else 0,
+                'female': row['female'] if row else 0
+            }
+        current_app.logger.info(f"Calculated scorecard data (SQL): {scorecard_data}")
 
+        # --- Pivot Query: school x grade matrix (fetch detailed data for unique counting) ---
+        pivot_sql = """
+            SELECT
+                asd.school_name,
+                asd.grade_name,
+                asd.student_id
+            FROM active_student_data asd
+            LEFT JOIN city c ON asd.school_name = c.school_name
+        """
+        pivot_params = []
+        pivot_conditions = []
+        if academic_year_filter != 'All':
+            pivot_conditions.append("asd.academic_year = %s")
+            pivot_params.append(academic_year_filter)
+        if city_filter != 'All':
+            pivot_conditions.append("c.city = %s")
+            pivot_params.append(city_filter)
+        if gender_filter != 'All':
+            pivot_conditions.append("asd.gender = %s")
+            pivot_params.append(gender_filter)
+        if pivot_conditions:
+            pivot_sql += " WHERE " + " AND ".join(pivot_conditions)
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute(pivot_sql, pivot_params)
+            data = cursor.fetchall()
         if not data:
             current_app.logger.info("No data found for the selected filters.")
-            # Return empty structure but indicate success
             empty_df = pd.DataFrame(columns=['School'])
             empty_df.index.name = 'School'
-            empty_pivot = empty_df # Or an empty pivot table if needed
-            empty_scorecard = {'total': 0, 'male': 0, 'female': 0}
-            return empty_pivot, empty_scorecard, None, 200 # Indicate success but no data
-
+            empty_pivot = empty_df
+            return empty_pivot, scorecard_data, None, 200
+        # Build DataFrame for pivoting
         df = pd.DataFrame(data)
-        current_app.logger.info(f"Created DataFrame with shape: {df.shape}")
-
-        # --- Calculate Scorecard Data ---
-        total_students = df['student_id'].nunique()
-        male_students = df[df['gender'].str.lower() == 'm']['student_id'].nunique()
-        female_students = df[df['gender'].str.lower() == 'f']['student_id'].nunique()
-        scorecard_data = {
-            'total': total_students,
-            'male': male_students,
-            'female': female_students
-        }
-        current_app.logger.info(f"Calculated scorecard data: {scorecard_data}")
-
-        # --- Create Pivot Table with Totals ---
-        pivot_table = pd.pivot_table(df,
-                                       index='school_name',
-                                       columns='grade_name',
-                                       values='student_id',
-                                       aggfunc=pd.Series.nunique,
-                                       fill_value=0,
-                                       margins=True,
-                                       margins_name='Total')
-        current_app.logger.info(f"Created pivot table with margins, shape: {pivot_table.shape}")
-
-        # --- Customize Pivot Table (Renaming, Ordering) ---
+        current_app.logger.info(f"Created detailed DataFrame with shape: {df.shape}")
+        if df.empty or 'student_id' not in df.columns:
+            current_app.logger.info("No data or missing student_id column for the selected filters.")
+            empty_df = pd.DataFrame(columns=['School'])
+            empty_df.index.name = 'School'
+            empty_pivot = empty_df
+            return empty_pivot, scorecard_data, None, 200
+        # Pivot: rows=school, columns=grade, values=unique student_id count
+        pivot_table = df.pivot_table(index='school_name', columns='grade_name', values='student_id', aggfunc=pd.Series.nunique, fill_value=0)
         pivot_table.index.name = 'School'
-        pivot_table.columns.name = 'Grade' # Set column axis name
-        current_app.logger.debug("Renamed pivot table index name.")
-
-        # Use the helper function for transformation and sorting
+        pivot_table.columns.name = 'Grade'
+        pivot_table = pivot_table.astype(int)
         pivot_table = _transform_and_sort_grades(pivot_table)
-
-        return pivot_table, scorecard_data, None, 200 # Success
-
+        # Calculate 'Total' column: unique student_id per school (across all grades)
+        pivot_table['Total'] = df.groupby('school_name')['student_id'].nunique().reindex(pivot_table.index).fillna(0).astype(int)
+        # 'Total' row: unique student_id per grade (across all schools)
+        grade_columns = [col for col in pivot_table.columns if col != 'Total']
+        total_row = df.groupby('grade_name')['student_id'].nunique().reindex(grade_columns).fillna(0).astype(int)
+        # Grand total: unique student_id in the entire filtered data
+        grand_total = df['student_id'].nunique()
+        # Build the total row as a Series with the correct index
+        total_row_full = pd.Series(list(total_row.values) + [grand_total], index=grade_columns + ['Total'])
+        pivot_table.loc['Total'] = total_row_full
+        return pivot_table, scorecard_data, None, 200
     except pymysql.Error as e:
         current_app.logger.error(f"Database error generating demographics data: {e}")
         return None, None, "Database error occurred.", 500
