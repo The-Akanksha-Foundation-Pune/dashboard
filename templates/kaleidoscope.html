@@ -296,6 +296,16 @@
                 {% endfor %}
             </select>
       </div>
+        <div class="col-12 col-md-2">
+            <label for="filter-assessment-category" class="form-label">Assessment Category</label>
+            <select class="form-select" id="filter-assessment-category">
+                <option value="All">All Assessment Categories</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="row mb-3" id="kaleidoscope-filters-row">
+            <!-- Existing filters here -->
+        </div>
     </form>
     </div>
     <!-- Tabs -->
@@ -392,6 +402,25 @@
 {% block extra_js %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <script>
+// --- Populate Assessment Category Dropdown ---
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/dashboard/kaleidoscope/filters')
+        .then(response => response.json())
+        .then(filters => {
+            const catSelect = document.getElementById('filter-assessment-category');
+            if (catSelect && filters.assessment_categories) {
+                catSelect.innerHTML = '<option value="All">All Assessment Categories</option>';
+                filters.assessment_categories.forEach(cat => {
+                    if (cat && cat !== "All") {
+                        const opt = document.createElement('option');
+                        opt.value = cat;
+                        opt.textContent = cat;
+                        catSelect.appendChild(opt);
+                    }
+                });
+            }
+        });
+});
 // --- Competency Tab ---
 let averageOrder = false;
 document.addEventListener('DOMContentLoaded', function() {
@@ -410,7 +439,8 @@ function getFilterParams() {
         subject: document.getElementById('subject').value,
         school: document.getElementById('school').value,
         grade: document.getElementById('grade').value === 'All' ? '' : document.getElementById('grade').value,
-        division: document.getElementById('division').value
+        division: document.getElementById('division').value,
+        assessment_category: document.getElementById('filter-assessment-category').value === 'All' ? '' : document.getElementById('filter-assessment-category').value
     };
 }
 
@@ -433,6 +463,7 @@ function getBucketColor(avg, isOverall = false) {
 function fetchCompetencyDataAndRender() {
     showLoadingOverlay();
     const params = new URLSearchParams(getFilterParams());
+    console.log('Kaleidoscope filter params:', getFilterParams()); // Debug filter values
     fetch(`/dashboard/kaleidoscope/data?${params.toString()}`)
         .then(response => response.json())
         .then(data => {
@@ -1371,6 +1402,14 @@ document.getElementById('portfolio-tab').addEventListener('shown.bs.tab', functi
         if (document.getElementById('student-table').classList.contains('active')) fetchStudentTableDataAndRender();
         if (document.getElementById('summary').classList.contains('active')) fetchSummaryDataAndRender();
     });
+});
+document.getElementById('filter-assessment-category').addEventListener('change', function() {
+    if (document.getElementById('competency').classList.contains('active')) fetchCompetencyDataAndRender();
+    if (document.getElementById('bucket').classList.contains('active')) fetchBucketDataAndRender();
+    if (document.getElementById('average').classList.contains('active')) fetchAverageDataAndRender();
+    if (document.getElementById('sorted').classList.contains('active')) fetchSortedListDataAndRender();
+    if (document.getElementById('student-table').classList.contains('active')) fetchStudentTableDataAndRender();
+    if (document.getElementById('summary').classList.contains('active')) fetchSummaryDataAndRender();
 });
 document.getElementById('competency-tab').addEventListener('shown.bs.tab', fetchCompetencyDataAndRender);
 document.getElementById('bucket-tab').addEventListener('shown.bs.tab', fetchBucketDataAndRender);

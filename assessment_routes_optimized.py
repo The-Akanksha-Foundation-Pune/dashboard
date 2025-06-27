@@ -408,8 +408,11 @@ def get_filters():
                 StudentAssessmentData.assessment_type,
                 func.count(StudentAssessmentData.id).label('count')
             ).group_by(StudentAssessmentData.assessment_type).order_by(desc('count')).all()
-
             assessment_types = [type[0] for type in assessment_types_query if type[0]]
+
+            # Get assessment categories
+            assessment_categories_query = session.query(StudentAssessmentData.assessment_category).distinct().all()
+            assessment_categories = sorted([cat[0] for cat in assessment_categories_query if cat[0]])
 
             # Get min and max assessment dates for date range picker
             min_date = session.query(db.func.min(StudentAssessmentData.assessmentDate)).scalar()
@@ -425,6 +428,7 @@ def get_filters():
         return jsonify({
             'academic_years': academic_years,
             'assessment_types': assessment_types,
+            'assessment_categories': assessment_categories,
             'date_range': {
                 'min': min_date_str,
                 'max': max_date_str
@@ -446,6 +450,7 @@ def get_secondary_filters():
         # Extract primary filter values
         academic_year = filters.get('academic_year', 'All')
         assessment_type = filters.get('assessment_type', 'All')
+        assessment_category = filters.get('assessment_category', 'All')
 
         # Use our custom session scope
         with session_scope() as session:
@@ -459,6 +464,8 @@ def get_secondary_filters():
                 subjects_query = subjects_query.filter(StudentAssessmentData.academic_year == academic_year)
             if assessment_type != 'All':
                 subjects_query = subjects_query.filter(StudentAssessmentData.assessment_type == assessment_type)
+            if assessment_category != 'All':
+                subjects_query = subjects_query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
             subjects_query = subjects_query.group_by(StudentAssessmentData.subject_name).order_by(desc('count'))
             subjects = [subject[0] for subject in subjects_query.all() if subject[0]]
@@ -473,6 +480,8 @@ def get_secondary_filters():
                 schools_query = schools_query.filter(StudentAssessmentData.academic_year == academic_year)
             if assessment_type != 'All':
                 schools_query = schools_query.filter(StudentAssessmentData.assessment_type == assessment_type)
+            if assessment_category != 'All':
+                schools_query = schools_query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
             schools_query = schools_query.group_by(StudentAssessmentData.school_name).order_by(desc('count'))
             schools = [school[0] for school in schools_query.all() if school[0]]
@@ -487,6 +496,8 @@ def get_secondary_filters():
                 grades_query = grades_query.filter(StudentAssessmentData.academic_year == academic_year)
             if assessment_type != 'All':
                 grades_query = grades_query.filter(StudentAssessmentData.assessment_type == assessment_type)
+            if assessment_category != 'All':
+                grades_query = grades_query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
             grades_query = grades_query.group_by(StudentAssessmentData.grade_name).order_by(desc('count'))
             grades = [grade[0] for grade in grades_query.all() if grade[0]]

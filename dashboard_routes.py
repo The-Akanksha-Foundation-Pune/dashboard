@@ -299,11 +299,16 @@ def get_assessment_filters():
         subjects = db.session.query(AllAssessments.subject_name).distinct().all()
         subjects = [subject[0] for subject in subjects if subject[0]]
 
+        # Query unique assessment categories
+        assessment_categories = db.session.query(AllAssessments.assessment_category).distinct().all()
+        assessment_categories = [cat[0] for cat in assessment_categories if cat[0]]
+
         return jsonify({
             'academic_years': sorted(academic_years),
             'exam_types': sorted(exam_types),
             'assessment_types': sorted(assessment_types),
-            'subjects': sorted(subjects)
+            'subjects': sorted(subjects),
+            'assessment_categories': sorted(assessment_categories)
         })
     except Exception as e:
         current_app.logger.error(f"Error getting assessment filters: {e}")
@@ -322,6 +327,7 @@ def get_assessment_data():
         exam_types = filters.get('exam_types', [])
         assessment_types = filters.get('assessment_types', [])
         subjects = filters.get('subjects', [])
+        assessment_category = filters.get('assessment_category')
 
         # Build the query
         query = db.session.query(AllAssessments)
@@ -335,6 +341,8 @@ def get_assessment_data():
             query = query.filter(AllAssessments.assessment_type.in_(assessment_types))
         if subjects:
             query = query.filter(AllAssessments.subject_name.in_(subjects))
+        if assessment_category:
+            query = query.filter(AllAssessments.assessment_category == assessment_category)
 
         # Execute the query with limit to avoid memory issues
         results = query.limit(10000).all()
@@ -406,6 +414,7 @@ def kaleidoscope_data():
     school = request.args.get('school')
     grade = request.args.get('grade')
     division = request.args.get('division')
+    assessment_category = request.args.get('assessment_category')
 
     from sqlalchemy import func
     query = db.session.query(
@@ -425,6 +434,8 @@ def kaleidoscope_data():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
     query = query.group_by(StudentAssessmentData.competency_level_name)
     # Add FORCE INDEX hint for MySQL
@@ -434,6 +445,8 @@ def kaleidoscope_data():
         dialect_name='mysql'
     )
     results = query.all()
+    # LOGGING: Print assessment_category and number of results
+    current_app.logger.info(f"[Kaleidoscope] assessment_category={assessment_category}, results_count={len(results)}")
     # Also compute overall sums for the same filters
     overall_query = db.session.query(
         func.sum(StudentAssessmentData.obtained_marks).label('overall_obtained'),
@@ -451,6 +464,8 @@ def kaleidoscope_data():
         overall_query = overall_query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         overall_query = overall_query.filter(StudentAssessmentData.division_name == division)
+    if assessment_category:
+        overall_query = overall_query.filter(StudentAssessmentData.assessment_category == assessment_category)
     overall = overall_query.one()
     data = [
         {
@@ -475,6 +490,7 @@ def kaleidoscope_bucket_data():
     school = request.args.get('school')
     grade = request.args.get('grade')
     division = request.args.get('division')
+    assessment_category = request.args.get('assessment_category')
 
     from sqlalchemy import func
     query = db.session.query(
@@ -496,6 +512,8 @@ def kaleidoscope_bucket_data():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
     # Use FORCE INDEX for MySQL
     query = query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
     query = query.group_by(StudentAssessmentData.competency_level_name, StudentAssessmentData.student_id)
@@ -564,6 +582,7 @@ def kaleidoscope_sorted_list():
     school = request.args.get('school')
     grade = request.args.get('grade')
     division = request.args.get('division')
+    assessment_category = request.args.get('assessment_category')
 
     from sqlalchemy import func
     query = db.session.query(
@@ -585,6 +604,8 @@ def kaleidoscope_sorted_list():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
     # Use FORCE INDEX for MySQL
     query = query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
     query = query.group_by(StudentAssessmentData.competency_level_name, StudentAssessmentData.student_id, StudentAssessmentData.student_name)
@@ -659,6 +680,7 @@ def kaleidoscope_average_table():
     school = request.args.get('school')
     grade = request.args.get('grade')
     division = request.args.get('division')
+    assessment_category = request.args.get('assessment_category')
 
     from sqlalchemy import func
     query = db.session.query(
@@ -678,6 +700,8 @@ def kaleidoscope_average_table():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
     # Use FORCE INDEX for MySQL
     query = query.with_hint(StudentAssessmentData, 'FORCE INDEX (idx_sad_dashboard_filters)', 'mysql')
     query = query.group_by(StudentAssessmentData.grade_name, StudentAssessmentData.subject_name)
@@ -959,6 +983,7 @@ def kaleidoscope_average_by_year_type():
     school = request.args.get('school')
     grade = request.args.get('grade')
     division = request.args.get('division')
+    assessment_category = request.args.get('assessment_category')
 
     query = db.session.query(
         StudentAssessmentData.academic_year,
@@ -978,6 +1003,8 @@ def kaleidoscope_average_by_year_type():
         query = query.filter(StudentAssessmentData.grade_name == grade)
     if division:
         query = query.filter(StudentAssessmentData.division_name == division)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
     query = query.group_by(StudentAssessmentData.academic_year, StudentAssessmentData.assessment_type)
     query = query.order_by(StudentAssessmentData.academic_year, StudentAssessmentData.assessment_type)
@@ -1003,6 +1030,7 @@ def kaleidoscope_skills_data():
     grade = request.args.get('grade')
     division = request.args.get('division')
     assessment_type = request.args.get('assessment_type')
+    assessment_category = request.args.get('assessment_category')
 
     query = db.session.query(
         StudentAssessmentData.question_name,
@@ -1027,6 +1055,8 @@ def kaleidoscope_skills_data():
         query = query.filter(StudentAssessmentData.division_name == division)
     if assessment_type and assessment_type != 'All':
         query = query.filter(StudentAssessmentData.assessment_type == assessment_type)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
     query = query.group_by(StudentAssessmentData.question_name)
     results = query.all()
@@ -1050,6 +1080,7 @@ def kaleidoscope_bucket_students():
     division = request.args.get('division')
     competency = request.args.get('competency')
     bucket = request.args.get('bucket')  # 'Red', 'Blue', 'Green'
+    assessment_category = request.args.get('assessment_category')
 
     query = db.session.query(
         StudentAssessmentData.student_id,
@@ -1072,6 +1103,8 @@ def kaleidoscope_bucket_students():
         query = query.filter(StudentAssessmentData.division_name == division)
     if competency and competency != 'Overall':
         query = query.filter(StudentAssessmentData.competency_level_name == competency)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
 
     # Structure: {student_id: {'name': ..., 'obtained': x, 'max': y}}
     student_totals = {}
@@ -1107,6 +1140,7 @@ def kaleidoscope_student_competency_averages():
     grade = request.args.get('grade')
     division = request.args.get('division')
     student_name = request.args.get('student_name')
+    assessment_category = request.args.get('assessment_category')
     query = db.session.query(
         StudentAssessmentData.student_name,
         StudentAssessmentData.competency_level_name,
@@ -1127,6 +1161,8 @@ def kaleidoscope_student_competency_averages():
         query = query.filter(StudentAssessmentData.division_name == division)
     if student_name:
         query = query.filter(StudentAssessmentData.student_name == student_name)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
     # Structure: {competency: {'obtained': x, 'max': y}}
     comp_totals = {}
     overall_obtained = 0
@@ -1159,6 +1195,7 @@ def kaleidoscope_bucket_students_averages():
     division = request.args.get('division')
     competency = request.args.get('competency')
     bucket = request.args.get('bucket')
+    assessment_category = request.args.get('assessment_category')
     # First, get all students in the selected bucket for the selected competency
     query = db.session.query(
         StudentAssessmentData.student_id,
@@ -1181,6 +1218,8 @@ def kaleidoscope_bucket_students_averages():
         query = query.filter(StudentAssessmentData.division_name == division)
     if competency and competency != 'Overall':
         query = query.filter(StudentAssessmentData.competency_level_name == competency)
+    if assessment_category:
+        query = query.filter(StudentAssessmentData.assessment_category == assessment_category)
     # Build student totals for the selected competency
     student_totals = {}
     for row in query:
@@ -1256,3 +1295,13 @@ def kaleidoscope_bucket_students_averages():
     # Sort by student name
     result.sort(key=lambda x: x['student_name'])
     return jsonify({'students': result, 'competencies': comp_list})
+
+@dashboard_bp.route('/kaleidoscope/filters', methods=['GET'])
+def get_kaleidoscope_filters():
+    try:
+        assessment_categories = db.session.query(StudentAssessmentData.assessment_category).distinct().all()
+        assessment_categories = [cat[0] for cat in assessment_categories if cat[0]]
+        return jsonify({'assessment_categories': sorted(assessment_categories)})
+    except Exception as e:
+        current_app.logger.error(f"Error getting kaleidoscope filters: {e}")
+        return jsonify({"error": "Failed to fetch kaleidoscope filters"}), 500
