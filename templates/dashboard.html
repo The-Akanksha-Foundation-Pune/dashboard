@@ -471,6 +471,10 @@ function calculateLinearTrend(yValues) {
       filtersLoaded = true;
       console.log("Filters populated successfully.");
       loadDemographicsTable();
+      // Ensure filter disabling logic runs after filters are rendered
+      if (typeof toggleMainAcademicYearFilter === 'function') {
+        toggleMainAcademicYearFilter();
+      }
 
     } catch (error) {
       console.error("Error fetching or populating filters:", error);
@@ -587,9 +591,9 @@ function calculateLinearTrend(yValues) {
     tableContainer.innerHTML = '';
     if (studentNumbersTabActive && scorecardsContainer) {
         scorecardsContainer.style.display = 'flex';
-        document.getElementById('total-students-card').textContent = '0';
-        document.getElementById('male-students-card').textContent = '0';
-        document.getElementById('female-students-card').textContent = '0';
+        updateScorecards(data.scorecards);
+    } else if (studentNumbersTabActive && scorecardsContainer) {
+        scorecardsContainer.style.display = 'none';
     }
 
     try {
@@ -883,7 +887,6 @@ function calculateLinearTrend(yValues) {
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
           console.log("Excel file download triggered.");
 
         } catch (error) {
@@ -1457,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const mainAcademicYearFilter = document.getElementById('academicYearFilter');
     const mainMonthFilter = document.getElementById('attendance-month-filter');
 
-    function toggleMainAcademicYearFilter() {
+    window.toggleMainAcademicYearFilter = function toggleMainAcademicYearFilter() {
       if (!mainAcademicYearFilter) {
         console.warn("Main Academic Year filter (academic_year_filter) not found.");
         return;
@@ -1466,18 +1469,23 @@ document.addEventListener('DOMContentLoaded', function() {
       const isStudentNumbersActive = studentNumbersTab && studentNumbersTab.classList.contains('active');
       console.log(`toggleMainAcademicYearFilter called. Is Student Numbers Active? ${isStudentNumbersActive}`);
 
-      if (isStudentNumbersActive) {
-        mainAcademicYearFilter.disabled = true;
-        console.log("Main Academic Year Filter Disabled (Student Numbers active)");
-      } else {
-        mainAcademicYearFilter.disabled = false;
-        console.log("Main Academic Year Filter Enabled (Student Numbers inactive)");
-      }
+      // Disable/enable both filters robustly
+      mainAcademicYearFilter.disabled = isStudentNumbersActive;
+      if (isStudentNumbersActive) mainAcademicYearFilter.setAttribute('disabled', 'disabled');
+      else mainAcademicYearFilter.removeAttribute('disabled');
 
       if (mainMonthFilter) {
         mainMonthFilter.disabled = isStudentNumbersActive;
-        console.log(`Month Filter ${isStudentNumbersActive ? 'Disabled' : 'Enabled'} (Student Numbers ${isStudentNumbersActive ? 'active' : 'inactive'})`);
+        if (isStudentNumbersActive) mainMonthFilter.setAttribute('disabled', 'disabled');
+        else mainMonthFilter.removeAttribute('disabled');
       }
+
+      // Add or remove a disabled class to the labels for visual feedback
+      const yearLabel = document.querySelector("label[for='academicYearFilter']");
+      const monthLabel = document.querySelector("label[for='attendance-month-filter']");
+      if (yearLabel) yearLabel.classList.toggle('text-muted', isStudentNumbersActive);
+      if (monthLabel) monthLabel.classList.toggle('text-muted', isStudentNumbersActive);
+      console.log('Academic Year and Month filters are now', isStudentNumbersActive ? 'disabled' : 'enabled');
     }
 
     const mainTabs = document.querySelectorAll('#demographics-tabs .nav-link');

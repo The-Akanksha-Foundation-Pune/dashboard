@@ -61,8 +61,8 @@ def get_filters():
         genders = sorted([gender[0] for gender in genders if gender[0]])
 
         # Get min and max assessment dates for date range picker
-        min_date = db.session.query(db.func.min(StudentAssessmentData.assessmentDate)).scalar()
-        max_date = db.session.query(db.func.max(StudentAssessmentData.assessmentDate)).scalar()
+        min_date = db.session.query(db.func.min(StudentAssessmentData.assessment_date)).scalar()
+        max_date = db.session.query(db.func.max(StudentAssessmentData.assessment_date)).scalar()
 
         min_date_str = min_date.strftime('%Y-%m-%d') if min_date else None
         max_date_str = max_date.strftime('%Y-%m-%d') if max_date else None
@@ -139,7 +139,7 @@ def get_dashboard_data():
             StudentAssessmentData.percentage,
             StudentAssessmentData.competency_level_name,
             StudentAssessmentData.division_name,
-            StudentAssessmentData.assessmentDate,
+            StudentAssessmentData.assessment_date,
             StudentAssessmentData.gender,
             StudentAssessmentData.present_absent,
             StudentAssessmentData.academic_year,
@@ -164,7 +164,7 @@ def get_dashboard_data():
         if gender != 'All':
             query = query.filter(StudentAssessmentData.gender == gender)
         if start_date and end_date:
-            query = query.filter(StudentAssessmentData.assessmentDate.between(start_date, end_date))
+            query = query.filter(StudentAssessmentData.assessment_date.between(start_date, end_date))
 
         # Execute the query to get all records
         results = query.all()
@@ -185,7 +185,7 @@ def get_dashboard_data():
                 'percentage': float(assessment.percentage) if assessment.percentage else 0,
                 'competency_level_name': assessment.competency_level_name,
                 'division_name': assessment.division_name,
-                'assessment_date': assessment.assessmentDate.strftime('%Y-%m-%d') if assessment.assessmentDate else None,
+                'assessment_date': assessment.assessment_date.strftime('%Y-%m-%d') if assessment.assessment_date else None,
                 'gender': assessment.gender,
                 'present_absent': assessment.present_absent,
                 'academic_year': assessment.academic_year,
@@ -238,7 +238,7 @@ def build_filter_conditions(filters):
     if gender != 'All':
         conditions.append(StudentAssessmentData.gender == gender)
     if start_date and end_date:
-        conditions.append(StudentAssessmentData.assessmentDate.between(start_date, end_date))
+        conditions.append(StudentAssessmentData.assessment_date.between(start_date, end_date))
 
     return conditions
 

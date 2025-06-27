@@ -86,14 +86,18 @@
                     <div class="mt-auto pb-3">
                         <div class="border-top pt-3 text-center">
                             {% if name %}
-                                <div class="dropdown">
+                                <div class="profile-section">
+                                    {% if picture %}
+                                        <img src="{{ picture }}" alt="Profile" class="profile-dropdown-img">
+                                    {% else %}
+                                        <i class="bi bi-person-circle profile-dropdown-img" style="font-size: 2rem;"></i>
+                                    {% endif %}
+                                    <span class="profile-name">{{ name }}</span>
+                                    <!-- Dropdown arrow or menu can go here if needed -->
+                                </div>
+                                <div class="dropdown mt-2">
                                     <a class="d-block text-decoration-none dropdown-toggle" href="#" id="sidebarProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        {% if picture %}
-                                            <img src="{{ picture }}" alt="Profile" class="profile-dropdown-img mb-2">
-                                        {% else %}
-                                            <i class="bi bi-person-circle me-1 align-middle"></i>
-                                        {% endif %}
-                                        <span>{{ name }}</span>
+                                        <span class="visually-hidden">Open profile menu</span>
                                     </a>
                                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sidebarProfileDropdown">
                                         <li>
@@ -175,5 +179,36 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JavaScript -->
     {% block extra_js %}{% endblock %}
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav d-md-none d-lg-none">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-house-door-fill"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('demographics.view') }}" class="mobile-nav-link {% if active_page == 'demographics' %}active{% endif %}">
+            <i class="bi bi-people-fill"></i>
+            <span>Demographics</span>
+        </a>
+        <a href="{{ url_for('assessment.view') }}" class="mobile-nav-link {% if active_page == 'assessments' %}active{% endif %}">
+            <i class="bi bi-clipboard-data"></i>
+            <span>Assessments</span>
+        </a>
+        <a href="{{ url_for('dashboard.kaleidoscope_dashboard') }}" class="mobile-nav-link {% if active_page == 'kaleidoscope' %}active{% endif %}">
+            <i class="bi bi-magic"></i>
+            <span>Kaleidoscope</span>
+        </a>
+        {% if name %}
+        <a href="{{ url_for('logout') }}" class="mobile-nav-link">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Logout</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('index') }}" class="mobile-nav-link">
+            <i class="bi bi-person-circle"></i>
+            <span>Login</span>
+        </a>
+        {% endif %}
+    </nav>
 </body>
 </html>

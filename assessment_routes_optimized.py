@@ -415,8 +415,8 @@ def get_filters():
             assessment_categories = sorted([cat[0] for cat in assessment_categories_query if cat[0]])
 
             # Get min and max assessment dates for date range picker
-            min_date = session.query(db.func.min(StudentAssessmentData.assessmentDate)).scalar()
-            max_date = session.query(db.func.max(StudentAssessmentData.assessmentDate)).scalar()
+            min_date = session.query(db.func.min(StudentAssessmentData.assessment_date)).scalar()
+            max_date = session.query(db.func.max(StudentAssessmentData.assessment_date)).scalar()
 
             min_date_str = min_date.strftime('%Y-%m-%d') if min_date else None
             max_date_str = max_date.strftime('%Y-%m-%d') if max_date else None
@@ -538,7 +538,7 @@ def build_filter_conditions(filters):
     if gender != 'All':
         conditions.append(StudentAssessmentData.gender == gender)
     if start_date and end_date:
-        conditions.append(StudentAssessmentData.assessmentDate.between(start_date, end_date))
+        conditions.append(StudentAssessmentData.assessment_date.between(start_date, end_date))
 
     return conditions
 
@@ -553,7 +553,7 @@ def get_paginated_data():
         # Extract pagination parameters
         page = request_data.get('page', 1)
         page_size = request_data.get('page_size', 50)
-        sort_by = request_data.get('sort_by', 'assessmentDate')
+        sort_by = request_data.get('sort_by', 'assessment_date')
         sort_dir = request_data.get('sort_dir', 'desc')
 
         # Extract filters
@@ -582,7 +582,7 @@ def get_paginated_data():
                 StudentAssessmentData.max_marks,
                 StudentAssessmentData.percentage,
                 StudentAssessmentData.competency_level_name,
-                StudentAssessmentData.assessmentDate,
+                StudentAssessmentData.assessment_date,
                 StudentAssessmentData.gender,
                 StudentAssessmentData.academic_year,
                 StudentAssessmentData.assessment_type
@@ -618,7 +618,7 @@ def get_paginated_data():
                     'max_marks': float(assessment.max_marks) if assessment.max_marks else 0,
                     'percentage': float(assessment.percentage) if assessment.percentage else 0,
                     'competency_level_name': assessment.competency_level_name,
-                    'assessment_date': assessment.assessmentDate.strftime('%Y-%m-%d') if assessment.assessmentDate else None,
+                    'assessment_date': assessment.assessment_date.strftime('%Y-%m-%d') if assessment.assessment_date else None,
                     'gender': assessment.gender,
                     'academic_year': assessment.academic_year,
                     'assessment_type': assessment.assessment_type
@@ -1085,7 +1085,7 @@ def export_data():
                 StudentAssessmentData.max_marks,
                 StudentAssessmentData.percentage,
                 StudentAssessmentData.competency_level_name,
-                StudentAssessmentData.assessmentDate,
+                StudentAssessmentData.assessment_date,
                 StudentAssessmentData.gender,
                 StudentAssessmentData.academic_year,
                 StudentAssessmentData.assessment_type
@@ -1096,7 +1096,7 @@ def export_data():
                 query = query.filter(*conditions)
 
             # Order by assessment date (descending)
-            query = query.order_by(StudentAssessmentData.assessmentDate.desc())
+            query = query.order_by(StudentAssessmentData.assessment_date.desc())
 
             # Execute the query
             results = query.all()
@@ -1112,7 +1112,7 @@ def export_data():
             'Max Marks': r.max_marks,
             'Percentage': r.percentage,
             'Competency Level': r.competency_level_name,
-            'Assessment Date': r.assessmentDate.strftime('%Y-%m-%d') if r.assessmentDate else None,
+            'Assessment Date': r.assessment_date.strftime('%Y-%m-%d') if r.assessment_date else None,
             'Gender': r.gender,
             'Academic Year': r.academic_year,
             'Assessment Type': r.assessment_type

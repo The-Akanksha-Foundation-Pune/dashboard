@@ -237,11 +237,28 @@ def _generate_demographics_data(filters):
         pivot_table['Total'] = df.groupby('school_name')['student_id'].nunique().reindex(pivot_table.index).fillna(0).astype(int)
         # 'Total' row: unique student_id per grade (across all schools)
         grade_columns = [col for col in pivot_table.columns if col != 'Total']
-        total_row = df.groupby('grade_name')['student_id'].nunique().reindex(grade_columns).fillna(0).astype(int)
-        # Grand total: unique student_id in the entire filtered data
+        
+        # Build a mapping from transformed column names to original grade names
+        def reverse_transform_grade_name(transformed):
+            # This should match the logic in _transform_and_sort_grades
+            if str(transformed).lower() == 'jr.kg':
+                return ['jr.kg', 'Jr.kG', 'Jr.KG']
+            if str(transformed).lower() == 'sr.kg':
+                return ['sr.kg', 'Sr.KG', 'Sr.kG']
+            if str(transformed).isdigit():
+                return [f'grade {transformed}', f'Grade {transformed}', str(transformed)]
+            return [str(transformed)]
+
+        total_row = []
+        for col in grade_columns:
+            possible_names = reverse_transform_grade_name(col)
+            # Sum unique student_ids for all possible names for this column
+            count = df[df['grade_name'].isin(possible_names)]['student_id'].nunique()
+            total_row.append(count)
         grand_total = df['student_id'].nunique()
-        # Build the total row as a Series with the correct index
-        total_row_full = pd.Series(list(total_row.values) + [grand_total], index=grade_columns + ['Total'])
+        total_row_full = pd.Series(total_row + [grand_total], index=grade_columns + ['Total'])
+        # Ensure all index values are strings before adding 'Total' row
+        pivot_table.index = pivot_table.index.astype(str)
         pivot_table.loc['Total'] = total_row_full
         return pivot_table, scorecard_data, None, 200
     except pymysql.Error as e:
